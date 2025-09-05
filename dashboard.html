@@ -1,89 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Dashboard - Diet Subscription</title>
-  <link rel="stylesheet" href="style.css">
-</head>
+<html>
+<head><meta charset="utf-8"/><title>Dashboard</title></head>
 <body>
   <h1>My Dashboard</h1>
-  <div id="userInfo"></div>
   <div id="dietPlan"></div>
-  <button onclick="logout()">Logout</button>
 
   <script>
-    const email = localStorage.getItem("email");
-    const plan = localStorage.getItem("selectedPlan");
+    const BASE = "https://diet-saas.onrender.com";
+    const email = localStorage.getItem("userEmail");
+    const plan = sessionStorage.getItem("selectedPlan");
 
-    if (!email) {
-      alert("Please login first");
-      window.location.href = "login.html";
-    }
+    async function loadPlan() {
+      if (!email || !plan) {
+        document.getElementById("dietPlan").innerText = "No plan selected. Go back to select a plan.";
+        return;
+      }
 
-    async function loadDashboard() {
       try {
-        const res = await fetch("https://diet-saas.onrender.com/check-subscription", {
+        const res = await fetch(`${BASE}/check-subscription`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, plan })
         });
-
         const data = await res.json();
 
         if (data.active) {
-          document.getElementById("userInfo").innerHTML =
-            `<h2>Welcome, ${email}</h2>
-             <p>Plan: ${plan}</p>
-             <p>Valid till: ${new Date(data.expiry).toDateString()}</p>`;
-
-          // Show diet plan based on subscription
-          let diet = "";
-          if (plan === "Weight Loss (1500 Cal)") {
-            diet = `
-              <h3>1500 Calorie Weight Loss Plan</h3>
-              <ul>
-                <li>Breakfast: Oats + Egg whites</li>
-                <li>Lunch: Brown rice + Chicken + Veggies</li>
-                <li>Dinner: Salad + Paneer</li>
-              </ul>`;
-          } else if (plan === "Muscle Gain (2000 Cal)") {
-            diet = `
-              <h3>2000 Calorie Muscle Gain Plan</h3>
-              <ul>
-                <li>Breakfast: 4 Whole Eggs + Oats</li>
-                <li>Lunch: Rice + Chicken + Veggies</li>
-                <li>Dinner: Roti + Paneer/Chicken</li>
-              </ul>`;
-          } else {
-            diet = `
-              <h3>General Fitness Plan</h3>
-              <ul>
-                <li>Breakfast: Fruits + Milk</li>
-                <li>Lunch: Roti + Sabzi + Dal</li>
-                <li>Dinner: Light Salad + Soup</li>
-              </ul>`;
-          }
-
-          document.getElementById("dietPlan").innerHTML = diet;
+          document.getElementById("dietPlan").innerHTML = `
+            <h2>Your Plan: ${plan}</h2>
+            <p>Valid until: ${new Date(data.expiry).toDateString()}</p>
+            <h3>Diet Plan:</h3>
+            <ul>
+              <li>Morning: Oats + Eggs</li>
+              <li>Lunch: Brown Rice + Chicken</li>
+              <li>Snack: Fruits</li>
+              <li>Dinner: Roti + Sabji</li>
+            </ul>
+          `;
         } else {
-          document.getElementById("userInfo").innerHTML =
-            `<h2>Welcome, ${email}</h2>
-             <p>Your subscription has expired.</p>
-             <a href="index.html">Renew Plan</a>`;
+          document.getElementById("dietPlan").innerText = "Your subscription expired or not found.";
         }
       } catch (err) {
         console.error("Dashboard Error:", err);
       }
     }
 
-    function logout() {
-      localStorage.clear();
-      window.location.href = "login.html";
-    }
-
-    loadDashboard();
+    loadPlan();
   </script>
-  <script src="script.js"></script>
-
 </body>
 </html>

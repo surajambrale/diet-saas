@@ -1,27 +1,57 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"/><title>Login</title></head>
+<head><meta charset="utf-8"/><title>Login / Register</title></head>
 <body>
-  <h1>Login</h1>
+  <h1>Login / Register</h1>
+
+  <!-- Register -->
+  <h2>Register</h2>
+  <form id="registerForm">
+    <input id="regName" type="text" required placeholder="Name" />
+    <input id="regEmail" type="email" required placeholder="Email" />
+    <input id="regPassword" type="password" required placeholder="Password" />
+    <button type="submit">Register</button>
+  </form>
+
+  <!-- Login -->
+  <h2>Login</h2>
   <form id="loginForm">
-    <input id="email" type="email" required placeholder="Email" />
-    <input id="password" type="password" required placeholder="Password" />
+    <input id="loginEmail" type="email" required placeholder="Email" />
+    <input id="loginPassword" type="password" required placeholder="Password" />
     <button type="submit">Login</button>
   </form>
 
   <script>
-    // backend base url
-    const BASE = "https://diet-saas.onrender.com"; // change if needed
-
-    // keep incoming plan params (if any)
+    const BASE = "https://diet-saas.onrender.com";
     const params = new URLSearchParams(window.location.search);
     const incomingPlan = params.get("plan");
     const incomingPrice = params.get("price");
 
+    // Register form
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("regName").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value;
+
+      try {
+        const res = await fetch(`${BASE}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json();
+        alert(data.message);
+      } catch (err) {
+        console.error("Register Error:", err);
+      }
+    });
+
+    // Login form
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
 
       try {
         const res = await fetch(`${BASE}/login`, {
@@ -32,19 +62,13 @@
         const data = await res.json();
 
         if (data.success) {
-          // save email in localStorage for persistent login
           localStorage.setItem("userEmail", email);
 
-          // If we came here with plan info, send user to payment with same params
           if (incomingPlan && incomingPrice) {
-            // also save to sessionStorage (fallback)
             sessionStorage.setItem("selectedPlan", incomingPlan);
             sessionStorage.setItem("selectedPrice", incomingPrice);
-
-            // redirect to payment with params + email
             window.location.href = `payment.html?plan=${encodeURIComponent(incomingPlan)}&price=${encodeURIComponent(incomingPrice)}&email=${encodeURIComponent(email)}`;
           } else {
-            // no plan: go to index or dashboard
             window.location.href = "index.html";
           }
         } else {
@@ -52,7 +76,6 @@
         }
       } catch (err) {
         console.error("Login Error:", err);
-        alert("Server error during login.");
       }
     });
   </script>
