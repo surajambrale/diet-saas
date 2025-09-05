@@ -12,44 +12,40 @@
   <button id="payBtn">Pay Now</button>
 
   <script>
-    // ✅ Always check if data exists in localStorage
-    const plan = localStorage.getItem("selectedPlan");
-    const price = localStorage.getItem("selectedPrice");
-    const email = localStorage.getItem("email");
-
-    // ✅ Fallback check → if null then redirect back to index
-    if (!plan || !price || !email) {
-      alert("Session expired! Please select a plan again.");
-      window.location.href = "index.html"; // redirect back to plan page
-    }
+    // ✅ Get values from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const plan = urlParams.get("plan");
+    const price = urlParams.get("price");
+    const email = urlParams.get("email");
 
     // ✅ Show plan details
-    document.getElementById("planDetails").innerHTML =
-      `<h2>${plan}</h2><p>Price: ₹${price}</p><p>Email: ${email}</p>`;
+    if (plan && price && email) {
+      document.getElementById("planDetails").innerHTML =
+        `<h2>${plan}</h2><p>Price: ₹${price}</p><p>Email: ${email}</p>`;
+    } else {
+      document.getElementById("planDetails").innerHTML =
+        "<p style='color:red'>Error: Plan details missing!</p>";
+      document.getElementById("payBtn").disabled = true;
+    }
 
+    // ✅ Payment button handler
     document.getElementById("payBtn").addEventListener("click", async () => {
       try {
-        // Step 1: Create order from backend
+        // Step 1: Create order
         const res = await fetch("https://diet-saas.onrender.com/create-order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            amount: Number(price),   // 👈 ensure number
+          body: JSON.stringify({
+            amount: price,
             plan: plan,
             email: email
           })
         });
-
         const order = await res.json();
-
-        if (!order.id) {
-          alert("Failed to create order. Try again.");
-          return;
-        }
 
         // Step 2: Open Razorpay checkout
         const options = {
-          key: "rzp_test_RDOq87kgys57h2", // Razorpay test key
+          key: "rzp_test_RDOq87kgys57h2", // ✅ apna Razorpay test key
           amount: order.amount,
           currency: order.currency,
           name: "Diet Subscription",
@@ -76,10 +72,6 @@
               alert("❌ Payment Failed!");
             }
           },
-          prefill: {   // 👈 mobile me user details auto-fill
-            email: email,
-            name: email.split("@")[0]
-          },
           theme: { color: "#3399cc" }
         };
 
@@ -87,7 +79,7 @@
         rzp.open();
       } catch (err) {
         console.error("Payment Error:", err);
-        alert("Error starting payment. Try again!");
+        alert("Payment Error. Please try again.");
       }
     });
   </script>
