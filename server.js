@@ -14,7 +14,8 @@ const Subscription = require("./models/subscription");
 const app = express();
 // app.use(cors());
 app.use(cors({
-  origin: ["http://localhost:3000", "https://diet-saas-eta.vercel.app/"], 
+  origin: ["http://localhost:3000", "https://diet-saas-eta.vercel.app"], 
+  methods: ["GET", "POST"],
   credentials: true
 }));
 app.use(bodyParser.json());
