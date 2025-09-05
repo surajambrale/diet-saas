@@ -15,6 +15,7 @@
       border-radius: 5px;
       margin-bottom: 20px;
     }
+    ul { line-height: 1.8; }
   </style>
 </head>
 <body>
@@ -34,6 +35,67 @@
       window.location.href = "login.html";
     });
 
+    // 🔥 Diet plans (expandable in future)
+    const dietPlans = {
+      "Basic": {
+        title: "Basic Plan Diet",
+        meals: [
+          "Morning: Poha + Green Tea",
+          "Lunch: Roti + Dal + Sabji",
+          "Snack: 1 Fruit (Apple/Banana)",
+          "Dinner: Rice + Sabji"
+        ]
+      },
+      "Standard": {
+        title: "Standard Plan Diet",
+        meals: [
+          "Morning: Oats + 3 Egg Whites",
+          "Lunch: Brown Rice + Chicken + Salad",
+          "Snack: Nuts + Green Tea",
+          "Dinner: 2 Roti + Paneer/Chicken + Salad"
+        ]
+      },
+      "Premium": {
+        title: "Premium Plan Diet",
+        meals: [
+          "Morning: Smoothie (Whey + Fruits + Peanut Butter)",
+          "Lunch: Quinoa + Grilled Chicken + Veggies",
+          "Snack: Protein Bar + Black Coffee",
+          "Dinner: 2 Roti + Fish/Paneer + Veggies"
+        ]
+      },
+      "Fat Loss": {
+        title: "Fat Loss Diet Plan",
+        meals: [
+          "Morning: Green Tea + 5 Almonds",
+          "Breakfast: Oats + 2 Egg Whites",
+          "Lunch: Brown Rice + Grilled Chicken + Salad",
+          "Snack: 1 Fruit + Green Tea",
+          "Dinner: 2 Roti + Paneer/Chicken + Veggies"
+        ]
+      },
+      "Muscle Gain": {
+        title: "Muscle Gain Diet Plan",
+        meals: [
+          "Morning: Milk + 5 Almonds + 2 Dates",
+          "Breakfast: Oats + 5 Egg Whites + 1 Whole Egg",
+          "Lunch: Brown Rice + Chicken + Dal + Veggies",
+          "Snack: Peanut Butter Sandwich + Banana",
+          "Dinner: 3 Roti + Paneer/Chicken/Fish + Salad"
+        ]
+      },
+      "General Fitness": {
+        title: "General Fitness Diet Plan",
+        meals: [
+          "Morning: Warm Water + Lemon",
+          "Breakfast: Poha/Upma + Green Tea",
+          "Lunch: 2 Roti + Sabji + Dal",
+          "Snack: 1 Fruit",
+          "Dinner: 2 Roti + Paneer/Chicken + Salad"
+        ]
+      }
+    };
+
     async function loadPlan() {
       if (!email || !plan) {
         document.getElementById("dietPlan").innerText = "No plan selected. Go back to select a plan.";
@@ -49,15 +111,14 @@
         const data = await res.json();
 
         if (data.active) {
+          const selectedDiet = dietPlans[plan] || { title: "Custom Plan", meals: [] };
+
           document.getElementById("dietPlan").innerHTML = `
-            <h2>Your Plan: ${plan}</h2>
+            <h2>${selectedDiet.title}</h2>
             <p>Valid until: ${new Date(data.expiry).toDateString()}</p>
             <h3>Diet Plan:</h3>
             <ul>
-              <li>Morning: Oats + Eggs</li>
-              <li>Lunch: Brown Rice + Chicken</li>
-              <li>Snack: Fruits</li>
-              <li>Dinner: Roti + Sabji</li>
+              ${selectedDiet.meals.map(item => `<li>${item}</li>`).join("")}
             </ul>
           `;
         } else {
