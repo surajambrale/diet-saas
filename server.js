@@ -7,7 +7,7 @@ const bcrypt = require("bcryptjs");
 
 // Models
 const User = require("./models/User");
-const Subscription = require("./models/Subscription");
+const Subscription = require("./models/subscription");
   
 
 // App setup
