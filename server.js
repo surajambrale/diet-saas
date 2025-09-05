@@ -1,7 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const bodyParser = require("body-parser");
 const Razorpay = require("razorpay");
 const bcrypt = require("bcryptjs");
 
@@ -12,7 +11,7 @@ const Subscription = require("./models/Subscription");
 // App setup
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json()); // ✅ bodyParser ki zarurat nahi ab (Express me built-in hai)
 
 // ✅ Razorpay Configuration
 const razorpay = new Razorpay({
@@ -125,16 +124,13 @@ app.post("/check-subscription", async (req, res) => {
 
 // ================== DATABASE CONNECTION ==================
 mongoose.connect(
-  "mongodb+srv://sambrale9003_db_user:JGu5OVBFdZ1h8f3u@diet-subs.yjxt7v8.mongodb.net/dietApp",
-  {}
+  "mongodb+srv://sambrale9003_db_user:JGu5OVBFdZ1h8f3u@diet-subs.yjxt7v8.mongodb.net/dietApp"
 )
 .then(() => console.log("✅ MongoDB Connected"))
 .catch((err) => console.error("MongoDB Error:", err));
 
 // ================== START SERVER ==================
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;  // ✅ Render/Vercel ke liye
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
-
-
