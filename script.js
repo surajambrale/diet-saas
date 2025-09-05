@@ -1,5 +1,5 @@
 // Apne backend ka URL (Render deploy hone ke baad yaha paste karna)
-const BASE_URL = "http://localhost:5000";  
+const BASE_URL = "https://diet-saas.onrender.com";  
 
 // ---------------- REGISTER ----------------
 async function register(event) {
