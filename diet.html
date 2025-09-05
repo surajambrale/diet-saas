@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Diet Plan</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .plan { display: none; padding: 15px; margin-top: 20px; border: 1px solid #ccc; border-radius: 10px; }
+    .expired { color: red; font-weight: bold; }
+    .active { color: green; font-weight: bold; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; }
+    button { margin-top: 15px; padding: 10px 15px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Your Diet Plan</h1>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <p id="status">Checking subscription...</p>
+
+  <!-- Weight Loss Plan -->
+  <div id="weightLoss" class="plan">
+    <h2>🥗 Weight Loss (1500 Calorie)</h2>
+    <ul>
+      <li>Breakfast: Oats + 1 Boiled Egg</li>
+      <li>Lunch: 2 Roti + Sabzi + Salad</li>
+      <li>Snack: Green Tea + Fruit</li>
+      <li>Dinner: Grilled Chicken/Fish + Vegetables</li>
+    </ul>
+  </div>
+
+  <!-- Muscle Gain Plan -->
+  <div id="muscleGain" class="plan">
+    <h2>💪 Muscle Gain (2000 Calorie)</h2>
+    <ul>
+      <li>Breakfast: 4 Egg Omelette + Brown Bread</li>
+      <li>Lunch: Rice + Chicken Curry + Salad</li>
+      <li>Snack: Banana + Peanut Butter</li>
+      <li>Dinner: Paneer/Chicken + Chapati + Veggies</li>
+    </ul>
+  </div>
+
+  <!-- General Fitness Plan -->
+  <div id="fitness" class="plan">
+    <h2>⚡ General Fitness</h2>
+    <ul>
+      <li>Breakfast: Poha/Upma</li>
+      <li>Lunch: 2 Chapati + Dal + Veggies</li>
+      <li>Snack: Buttermilk + Nuts</li>
+      <li>Dinner: Light Sabzi + Roti</li>
+    </ul>
+  </div>
+
+  <button onclick="window.location.href='index.html'">Renew Subscription</button>
+
+  <script>
+    async function checkSubscription() {
+      const email = localStorage.getItem("userEmail");
+      const plan = localStorage.getItem("userPlan");
+
+      // Agar user login nahi hai
+      if (!email) {
+        alert("Please login first!");
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Agar plan choose hi nahi kiya
+      if (!plan) {
+        document.getElementById("status").innerHTML =
+          "<span class='expired'>❌ No active plan found. Please subscribe first.</span>";
+        return;
+      }
+
+      const res = await fetch("http://localhost:5000/check-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, plan })
+      });
+      const data = await res.json();
+
+      if (data.active) {
+        document.getElementById("status").innerHTML =
+          "<span class='active'>✅ Subscription Active (till " +
+          new Date(data.expiry).toLocaleDateString() + ")</span>";
+
+        if (plan === "Weight Loss") document.getElementById("weightLoss").style.display = "block";
+        if (plan === "Muscle Gain") document.getElementById("muscleGain").style.display = "block";
+        if (plan === "General Fitness") document.getElementById("fitness").style.display = "block";
+      } else {
+        document.getElementById("status").innerHTML =
+          "<span class='expired'>❌ " + data.message + "</span>";
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userPlan");
+      window.location.href = "login.html";
+    }
+
+    checkSubscription();
+  </script>
+</body>
+</html>

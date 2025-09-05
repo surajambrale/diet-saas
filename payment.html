@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment - Diet Subscription</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <h1>Payment</h1>
+  <div id="planDetails"></div>
+  <button id="payBtn">Pay Now</button>
+
+  <script>
+    const plan = localStorage.getItem("selectedPlan");
+    const price = localStorage.getItem("selectedPrice");
+    const email = localStorage.getItem("email");
+
+    document.getElementById("planDetails").innerHTML =
+      `<h2>${plan}</h2><p>Price: ₹${price}</p>`;
+
+    document.getElementById("payBtn").addEventListener("click", async () => {
+      try {
+        // Step 1: Create order from backend
+        const res = await fetch("http://localhost:5000/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: price })
+        });
+        const order = await res.json();
+
+        // Step 2: Open Razorpay checkout
+        const options = {
+          key: "rzp_test_RDOq87kgys57h2", // apna Razorpay test key
+          amount: order.amount,
+          currency: order.currency,
+          name: "Diet Subscription",
+          description: plan,
+          order_id: order.id,
+          handler: async function (response) {
+            // Step 3: Verify payment
+            const verifyRes = await fetch("http://localhost:5000/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: email.split("@")[0],
+                email,
+                plan,
+                paymentId: response.razorpay_payment_id
+              })
+            });
+
+            const result = await verifyRes.json();
+            if (result.success) {
+              alert("Payment Successful! Subscription Activated.");
+              window.location.href = "dashboard.html";
+            } else {
+              alert("Payment Failed!");
+            }
+          },
+          theme: { color: "#3399cc" }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        console.error("Payment Error:", err);
+      }
+    });
+  </script>
+  <script src="js/payment.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Diet Subscription - Plans</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Choose Your Diet Plan</h1>
+
+  <div class="plan">
+    <h2>Weight Loss</h2>
+    <p>1500 Calories</p>
+    <p>₹499 / month</p>
+    <button onclick="selectPlan('Weight Loss', 499)">Subscribe Now</button>
+  </div>
+
+  <div class="plan">
+    <h2>Muscle Gain</h2>
+    <p>2000 Calories</p>
+    <p>₹699 / month</p>
+    <button onclick="selectPlan('Muscle Gain', 699)">Subscribe Now</button>
+  </div>
+
+  <div class="plan">
+    <h2>General Fitness</h2>
+    <p>Balanced Nutrition</p>
+    <p>₹399 / month</p>
+    <button onclick="selectPlan('General Fitness', 399)">Subscribe Now</button>
+  </div>
+
+  <script>
+    function selectPlan(plan, price) {
+      localStorage.setItem("selectedPlan", plan);
+      localStorage.setItem("selectedPrice", price);
+
+      if (!localStorage.getItem("email")) {
+        // agar login nahi hai to login pe bhej do
+        window.location.href = "login.html";
+      } else {
+        // agar login hai to payment pe bhej do
+        window.location.href = "payment.html";
+      }
+      
+      //login logic
+      function goToLogin(plan) {
+      localStorage.setItem("selectedPlan", plan);
+      window.location.href = "login.html";
+    }
+    }
+
+    //////
+    function buyPlan(plan, amount) {
+    localStorage.setItem("selectedPlan", plan);
+    localStorage.setItem("planAmount", amount);
+    if (!localStorage.getItem("email")) {
+      window.location.href = "login.html";
+    } else {
+      window.location.href = "payment.html";
+    }
+  }
+  </script>
+</body>
+</html>
