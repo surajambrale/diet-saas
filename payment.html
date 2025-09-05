@@ -12,12 +12,20 @@
   <button id="payBtn">Pay Now</button>
 
   <script>
+    // ✅ Always check if data exists in localStorage
     const plan = localStorage.getItem("selectedPlan");
     const price = localStorage.getItem("selectedPrice");
     const email = localStorage.getItem("email");
 
+    // ✅ Fallback check → if null then redirect back to index
+    if (!plan || !price || !email) {
+      alert("Session expired! Please select a plan again.");
+      window.location.href = "index.html"; // redirect back to plan page
+    }
+
+    // ✅ Show plan details
     document.getElementById("planDetails").innerHTML =
-      `<h2>${plan}</h2><p>Price: ₹${price}</p>`;
+      `<h2>${plan}</h2><p>Price: ₹${price}</p><p>Email: ${email}</p>`;
 
     document.getElementById("payBtn").addEventListener("click", async () => {
       try {
@@ -26,16 +34,22 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
-            amount: price ,
+            amount: Number(price),   // 👈 ensure number
             plan: plan,
             email: email
           })
         });
+
         const order = await res.json();
+
+        if (!order.id) {
+          alert("Failed to create order. Try again.");
+          return;
+        }
 
         // Step 2: Open Razorpay checkout
         const options = {
-          key: "rzp_test_RDOq87kgys57h2", // apna Razorpay test key
+          key: "rzp_test_RDOq87kgys57h2", // Razorpay test key
           amount: order.amount,
           currency: order.currency,
           name: "Diet Subscription",
@@ -56,11 +70,15 @@
 
             const result = await verifyRes.json();
             if (result.success) {
-              alert("Payment Successful! Subscription Activated.");
+              alert("✅ Payment Successful! Subscription Activated.");
               window.location.href = "dashboard.html";
             } else {
-              alert("Payment Failed!");
+              alert("❌ Payment Failed!");
             }
+          },
+          prefill: {   // 👈 mobile me user details auto-fill
+            email: email,
+            name: email.split("@")[0]
           },
           theme: { color: "#3399cc" }
         };
@@ -69,9 +87,9 @@
         rzp.open();
       } catch (err) {
         console.error("Payment Error:", err);
+        alert("Error starting payment. Try again!");
       }
     });
   </script>
-  <script src="js/payment.js"></script>
 </body>
 </html>
