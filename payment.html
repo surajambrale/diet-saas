@@ -25,7 +25,11 @@
         const res = await fetch("https://diet-saas.onrender.com/create-order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: price })
+          body: JSON.stringify({ 
+            amount: price ,
+            plan: plan,
+            email: email
+          })
         });
         const order = await res.json();
 
