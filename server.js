@@ -12,7 +12,11 @@ const Subscription = require("./models/subscription");
 
 // App setup
 const app = express();
-app.use(cors());
+// app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "https://diet-saas-eta.vercel.app/"], 
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 // ✅ Razorpay Configuration
