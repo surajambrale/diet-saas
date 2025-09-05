@@ -1,4 +1,5 @@
-const apiUrl = "http://localhost:5000"; // backend ka url
+// const apiUrl = "http://localhost:5000"; // backend ka url
+const apiUrl = "https://diet-saas.onrender.com/login";
 
 // Register
 const registerForm = document.getElementById("registerForm");
