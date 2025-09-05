@@ -22,7 +22,7 @@
 
     async function loadDashboard() {
       try {
-        const res = await fetch("http://localhost:5000/check-subscription", {
+        const res = await fetch("https://diet-saas.onrender.com/check-subscription", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, plan })

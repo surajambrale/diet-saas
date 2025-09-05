@@ -1,4 +1,4 @@
-const apiUrl = "http://localhost:5000";
+const apiUrl = "https://diet-saas.onrender.com";
 
 async function startPayment() {
   const email = localStorage.getItem("email");

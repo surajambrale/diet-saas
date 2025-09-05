@@ -22,7 +22,7 @@
     document.getElementById("payBtn").addEventListener("click", async () => {
       try {
         // Step 1: Create order from backend
-        const res = await fetch("http://localhost:5000/create-order", {
+        const res = await fetch("https://diet-saas.onrender.com/create-order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ amount: price })
@@ -39,7 +39,7 @@
           order_id: order.id,
           handler: async function (response) {
             // Step 3: Verify payment
-            const verifyRes = await fetch("http://localhost:5000/verify-payment", {
+            const verifyRes = await fetch("https://diet-saas.onrender.com/verify-payment", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
