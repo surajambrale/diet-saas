@@ -1,51 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Login - Diet Subscription</title>
-  <link rel="stylesheet" href="style.css">
-</head>
+<html>
+<head><meta charset="utf-8"/><title>Login</title></head>
 <body>
   <h1>Login</h1>
   <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required><br>
-    <input type="password" id="password" placeholder="Password" required><br>
+    <input id="email" type="email" required placeholder="Email" />
+    <input id="password" type="password" required placeholder="Password" />
     <button type="submit">Login</button>
   </form>
 
-  <p>Don’t have an account? <a href="register.html">Register here</a></p>
-
   <script>
+    // backend base url
+    const BASE = "https://diet-saas.onrender.com"; // change if needed
+
+    // keep incoming plan params (if any)
+    const params = new URLSearchParams(window.location.search);
+    const incomingPlan = params.get("plan");
+    const incomingPrice = params.get("price");
+
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-
-      const email = document.getElementById("email").value;
+      const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
 
       try {
-        // const res = await fetch("http://localhost:5000/login", {
-        const res = await fetch("https://diet-saas.onrender.com/login", {
+        const res = await fetch(`${BASE}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password })
         });
-
         const data = await res.json();
 
         if (data.success) {
-          localStorage.setItem("email", email);
-          alert("Login successful!");
-          window.location.href = "payment.html"; // plan select karne ke baad direct payment
+          // save email in localStorage for persistent login
+          localStorage.setItem("userEmail", email);
+
+          // If we came here with plan info, send user to payment with same params
+          if (incomingPlan && incomingPrice) {
+            // also save to sessionStorage (fallback)
+            sessionStorage.setItem("selectedPlan", incomingPlan);
+            sessionStorage.setItem("selectedPrice", incomingPrice);
+
+            // redirect to payment with params + email
+            window.location.href = `payment.html?plan=${encodeURIComponent(incomingPlan)}&price=${encodeURIComponent(incomingPrice)}&email=${encodeURIComponent(email)}`;
+          } else {
+            // no plan: go to index or dashboard
+            window.location.href = "index.html";
+          }
         } else {
-          alert(data.message);
+          alert(data.message || "Login failed");
         }
       } catch (err) {
         console.error("Login Error:", err);
+        alert("Server error during login.");
       }
     });
   </script>
-  <script src="js/auth.js"></script>
-  <script src="script.js"></script>
-
 </body>
 </html>

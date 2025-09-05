@@ -1,59 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Payment - Diet Subscription</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Payment</title>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
   <h1>Payment</h1>
   <div id="planDetails"></div>
   <button id="payBtn">Pay Now</button>
+  <button id="goBack" style="display:none">Go Back to Plans</button>
 
   <script>
-    // ✅ Get values from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const plan = urlParams.get("plan");
-    const price = urlParams.get("price");
-    const email = urlParams.get("email");
+    const BASE = "https://diet-saas.onrender.com"; // backend
 
-    // ✅ Show plan details
-    if (plan && price && email) {
-      document.getElementById("planDetails").innerHTML =
-        `<h2>${plan}</h2><p>Price: ₹${price}</p><p>Email: ${email}</p>`;
-    } else {
-      document.getElementById("planDetails").innerHTML =
-        "<p style='color:red'>Error: Plan details missing!</p>";
-      document.getElementById("payBtn").disabled = true;
+    // 1) Try URL params first
+    const urlParams = new URLSearchParams(window.location.search);
+    let plan = urlParams.get("plan");
+    let price = urlParams.get("price");
+    let email = urlParams.get("email");
+
+    // 2) Fallback to sessionStorage
+    if (!plan) plan = sessionStorage.getItem("selectedPlan");
+    if (!price) price = sessionStorage.getItem("selectedPrice");
+    if (!email) email = sessionStorage.getItem("userEmail") || localStorage.getItem("userEmail");
+
+    // Debug logs (open browser console on mobile via remote debug if needed)
+    console.log("Payment page values -> plan:", plan, "price:", price, "email:", email);
+    document.getElementById("planDetails").innerText = plan ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}` : "Plan details missing!";
+
+    // If missing any required, disable pay button and show goBack
+    const payBtn = document.getElementById("payBtn");
+    const goBack = document.getElementById("goBack");
+    if (!plan || !price || !email) {
+      payBtn.disabled = true;
+      goBack.style.display = "inline-block";
+      goBack.onclick = () => window.location.href = "index.html";
     }
 
-    // ✅ Payment button handler
-    document.getElementById("payBtn").addEventListener("click", async () => {
+    payBtn.addEventListener("click", async () => {
       try {
-        // Step 1: Create order
-        const res = await fetch("https://diet-saas.onrender.com/create-order", {
+        // ensure numbers
+        const amountNum = Number(price);
+        if (!plan || !amountNum || !email) {
+          alert("Plan details missing — please go back and select a plan again.");
+          return;
+        }
+
+        // Create order on backend (send plan+email too)
+        const createRes = await fetch(`${BASE}/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: price,
-            plan: plan,
-            email: email
-          })
+          body: JSON.stringify({ amount: amountNum, plan: plan, email: email })
         });
-        const order = await res.json();
 
-        // Step 2: Open Razorpay checkout
+        const order = await createRes.json();
+        if (!order || !order.id) {
+          console.error("Order creation failed:", order);
+          alert("Unable to create order. Try again.");
+          return;
+        }
+
+        // Open Razorpay
         const options = {
-          key: "rzp_test_RDOq87kgys57h2", // ✅ apna Razorpay test key
+          key: "rzp_test_RDOq87kgys57h2",
           amount: order.amount,
           currency: order.currency,
           name: "Diet Subscription",
           description: plan,
           order_id: order.id,
-          handler: async function (response) {
-            // Step 3: Verify payment
-            const verifyRes = await fetch("https://diet-saas.onrender.com/verify-payment", {
+          prefill: { email: email, name: email.split("@")[0] },
+          handler: async function(response) {
+            // Verify and save subscription
+            const verifyRes = await fetch(`${BASE}/verify-payment`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -63,13 +82,14 @@
                 paymentId: response.razorpay_payment_id
               })
             });
-
             const result = await verifyRes.json();
             if (result.success) {
-              alert("✅ Payment Successful! Subscription Activated.");
+              alert("Payment successful — subscription activated!");
+              // optionally save sessionStorage/localStorage
+              sessionStorage.setItem("subActive", "true");
               window.location.href = "dashboard.html";
             } else {
-              alert("❌ Payment Failed!");
+              alert("Payment verification failed.");
             }
           },
           theme: { color: "#3399cc" }
@@ -77,9 +97,10 @@
 
         const rzp = new Razorpay(options);
         rzp.open();
+
       } catch (err) {
         console.error("Payment Error:", err);
-        alert("Payment Error. Please try again.");
+        alert("Payment error. Check console.");
       }
     });
   </script>

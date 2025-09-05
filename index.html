@@ -1,66 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Diet Subscription - Plans</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Select Plan</title>
 </head>
 <body>
-  <h1>Choose Your Diet Plan</h1>
+  <h1>Choose Plan</h1>
 
-  <div class="plan">
-    <h2>Weight Loss</h2>
-    <p>1500 Calories</p>
-    <p>₹499 / month</p>
-    <button onclick="selectPlan('Weight Loss', 499)">Subscribe Now</button>
-  </div>
-
-  <div class="plan">
-    <h2>Muscle Gain</h2>
-    <p>2000 Calories</p>
-    <p>₹699 / month</p>
-    <button onclick="selectPlan('Muscle Gain', 699)">Subscribe Now</button>
-  </div>
-
-  <div class="plan">
-    <h2>General Fitness</h2>
-    <p>Balanced Nutrition</p>
-    <p>₹399 / month</p>
-    <button onclick="selectPlan('General Fitness', 399)">Subscribe Now</button>
+  <div>
+    <button onclick="selectPlan('Weight Loss', 499)">Weight Loss - ₹499</button>
+    <button onclick="selectPlan('Muscle Gain', 699)">Muscle Gain - ₹699</button>
+    <button onclick="selectPlan('General Fitness', 399)">General Fitness - ₹399</button>
   </div>
 
   <script>
+    // call this when user clicks a plan
     function selectPlan(plan, price) {
-      localStorage.setItem("selectedPlan", plan);
-      localStorage.setItem("selectedPrice", price);
+      // save to sessionStorage as primary (survives redirects in same tab)
+      sessionStorage.setItem("selectedPlan", plan);
+      sessionStorage.setItem("selectedPrice", String(price));
 
-      if (!localStorage.getItem("email")) {
-        // agar login nahi hai to login pe bhej do
-        window.location.href = "login.html";
+      // If user logged in, we likely have email saved in localStorage (from login)
+      const email = localStorage.getItem("userEmail") || "";
+
+      if (!email) {
+        // not logged in -> send plan info to login so it can redirect to payment after login
+        window.location.href = `login.html?plan=${encodeURIComponent(plan)}&price=${encodeURIComponent(price)}`;
       } else {
-        // agar login hai to payment pe bhej do
-        window.location.href = "payment.html";
+        // already logged in -> go to payment page with params (URL ensures mobile works)
+        window.location.href = `payment.html?plan=${encodeURIComponent(plan)}&price=${encodeURIComponent(price)}&email=${encodeURIComponent(email)}`;
       }
-      
-      //login logic
-      function goToLogin(plan) {
-      localStorage.setItem("selectedPlan", plan);
-      window.location.href = "login.html";
     }
-    }
-
-    //////
-    function buyPlan(plan, amount) {
-    localStorage.setItem("selectedPlan", plan);
-    localStorage.setItem("planAmount", amount);
-    if (!localStorage.getItem("email")) {
-      window.location.href = "login.html";
-    } else {
-      window.location.href = "payment.html";
-    }
-  }
   </script>
-  <script src="script.js"></script>
-
 </body>
 </html>
