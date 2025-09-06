@@ -2,9 +2,71 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Payment</title>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8f9fa;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      margin-bottom: 25px;
+      color: #111;
+    }
+
+    #planDetails {
+      font-size: 1.3rem;
+      background: #fff;
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      margin-bottom: 30px;
+      line-height: 1.8;
+      white-space: pre-line;
+      color: #000;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      margin: 12px auto;
+      padding: 18px 20px;
+      font-size: 1.3rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    #payBtn {
+      background: #f40d05;
+      color: #fff;
+      font-weight: bold;
+    }
+    #payBtn:hover { background: #0056b3; }
+
+    #goBack {
+      background: #6c757d;
+      color: #fff;
+      font-weight: bold;
+    }
+    #goBack:hover { background: #5a6268; }
+
+    /* Mobile first approach */
+    @media (max-width: 480px) {
+      body { padding: 15px; }
+      h1 { font-size: 2rem; }
+      #planDetails { font-size: 1.2rem; padding: 20px; }
+      button { font-size: 1.2rem; padding: 16px; }
+    }
+  </style>
 </head>
 <body>
   <h1>Payment</h1>
@@ -26,29 +88,28 @@
     if (!price) price = sessionStorage.getItem("selectedPrice");
     if (!email) email = sessionStorage.getItem("userEmail") || localStorage.getItem("userEmail");
 
-    // Debug logs (open browser console on mobile via remote debug if needed)
     console.log("Payment page values -> plan:", plan, "price:", price, "email:", email);
-    document.getElementById("planDetails").innerText = plan ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}` : "Plan details missing!";
+    document.getElementById("planDetails").innerText = 
+      plan ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}` 
+           : "Plan details missing!";
 
-    // If missing any required, disable pay button and show goBack
     const payBtn = document.getElementById("payBtn");
     const goBack = document.getElementById("goBack");
+
     if (!plan || !price || !email) {
       payBtn.disabled = true;
-      goBack.style.display = "inline-block";
+      goBack.style.display = "block";
       goBack.onclick = () => window.location.href = "index.html";
     }
 
     payBtn.addEventListener("click", async () => {
       try {
-        // ensure numbers
         const amountNum = Number(price);
         if (!plan || !amountNum || !email) {
           alert("Plan details missing — please go back and select a plan again.");
           return;
         }
 
-        // Create order on backend (send plan+email too)
         const createRes = await fetch(`${BASE}/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -62,7 +123,6 @@
           return;
         }
 
-        // Open Razorpay
         const options = {
           key: "rzp_test_RDOq87kgys57h2",
           amount: order.amount,
@@ -72,7 +132,6 @@
           order_id: order.id,
           prefill: { email: email, name: email.split("@")[0] },
           handler: async function(response) {
-            // Verify and save subscription
             const verifyRes = await fetch(`${BASE}/verify-payment`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -86,7 +145,6 @@
             const result = await verifyRes.json();
             if (result.success) {
               alert("Payment successful — subscription activated!");
-              // optionally save sessionStorage/localStorage
               sessionStorage.setItem("subActive", "true");
               window.location.href = "dashboard.html";
             } else {
