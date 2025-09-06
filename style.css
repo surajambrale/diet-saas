@@ -27,13 +27,13 @@ h1, h2, h3 {
 /* ============ CARD STYLING ============ */
 .card {
   background: #1e1e1e;
-  border-radius: 12px;
-  padding: 25px;
-  margin: 15px auto;
+  border-radius: 14px;
+  padding: 28px;
+  margin: 18px auto;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   text-align: center;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
   transition: transform 0.2s ease-in-out;
 }
 
@@ -44,13 +44,13 @@ h1, h2, h3 {
 /* ============ INPUT FIELDS ============ */
 input {
   width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 8px;
+  padding: 14px;
+  margin: 12px 0;
+  border-radius: 10px;
   border: none;
   background: #2a2a2a;
   color: #fff;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 input:focus {
@@ -60,12 +60,12 @@ input:focus {
 /* ============ BUTTONS ============ */
 button {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #ff416c, #ff4b2b);
   color: #fff;
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
   transition: background 0.3s ease;
 }
@@ -77,15 +77,16 @@ button:hover {
 /* Logout button special */
 #logoutBtn {
   width: auto;
-  padding: 10px 20px;
+  padding: 12px 24px;
   background: #e63946;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 /* ============ LINKS ============ */
 a {
   color: #ffcc70;
   text-decoration: none;
+  font-size: 16px;
 }
 
 a:hover {
@@ -95,39 +96,51 @@ a:hover {
 /* ============ MOBILE RESPONSIVE ============ */
 @media (max-width: 768px) {
   body {
-    padding: 15px;
+    padding: 18px;
   }
 
   .card {
-    padding: 20px;
-    width: 90%;
+    padding: 24px;
+    width: 95%;
   }
 
   h1 {
-    font-size: 22px;
+    font-size: 26px;
   }
 
   h2 {
-    font-size: 18px;
+    font-size: 22px;
   }
 
   button, input {
-    font-size: 14px;
-    padding: 10px;
+    font-size: 18px;
+    padding: 14px;
+  }
+
+  a {
+    font-size: 18px;
   }
 }
 
 @media (max-width: 480px) {
   h1 {
+    font-size: 24px;
+  }
+
+  h2 {
     font-size: 20px;
   }
 
   .card {
-    padding: 15px;
+    padding: 20px;
   }
 
   button, input {
-    font-size: 13px;
-    padding: 8px;
+    font-size: 18px;
+    padding: 16px;
+  }
+
+  a {
+    font-size: 18px;
   }
 }
