@@ -2,69 +2,88 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment</title>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
+    /* Reset + Shake Fix */
+    html, body {
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      width: 100%;
+      overflow-x: hidden; /* ✅ No horizontal scroll */
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
       background: #f8f9fa;
-      text-align: center;
+    }
+    *, *::before, *::after {
+      box-sizing: inherit;
     }
 
+    /* Page Title */
     h1 {
-      font-size: 2.4rem;
-      margin-bottom: 25px;
-      color: #111;
+      text-align: center;
+      font-size: 2rem;
+      color: #333;
+      margin: 20px 0;
     }
 
+    /* Plan Details */
     #planDetails {
-      font-size: 1.3rem;
       background: #fff;
-      padding: 25px;
-      border-radius: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      margin-bottom: 30px;
-      line-height: 1.8;
-      white-space: pre-line;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 15px auto;
+      max-width: 500px;
+      width: 90%;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       color: #000;
     }
 
+    /* Buttons */
     button {
       display: block;
-      width: 100%;
-      margin: 12px auto;
+      width: 90%;
+      max-width: 500px;
+      margin: 15px auto;
       padding: 18px 20px;
       font-size: 1.3rem;
       border: none;
       border-radius: 10px;
       cursor: pointer;
-      transition: 0.2s;
+      transition: 0.2s ease-in-out;
     }
-
     #payBtn {
-      background: #f40d05;
-      color: #fff;
-      font-weight: bold;
+      background: #f60505;
+      color: white;
     }
-    #payBtn:hover { background: #0056b3; }
-
+    #payBtn:hover {
+      background: #0056b3;
+    }
     #goBack {
       background: #6c757d;
-      color: #fff;
-      font-weight: bold;
+      color: white;
     }
-    #goBack:hover { background: #5a6268; }
+    #goBack:hover {
+      background: #5a6268;
+    }
 
-    /* Mobile first approach */
+    /* Responsive */
     @media (max-width: 480px) {
-      body { padding: 15px; }
-      h1 { font-size: 2rem; }
-      #planDetails { font-size: 1.2rem; padding: 20px; }
-      button { font-size: 1.2rem; padding: 16px; }
+      h1 {
+        font-size: 1.8rem;
+      }
+      #planDetails {
+        font-size: 1.1rem;
+        padding: 15px;
+      }
+      button {
+        font-size: 1.2rem;
+        padding: 16px;
+      }
     }
   </style>
 </head>
@@ -89,16 +108,16 @@
     if (!email) email = sessionStorage.getItem("userEmail") || localStorage.getItem("userEmail");
 
     console.log("Payment page values -> plan:", plan, "price:", price, "email:", email);
-    document.getElementById("planDetails").innerText = 
-      plan ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}` 
-           : "Plan details missing!";
+    document.getElementById("planDetails").innerText = plan 
+      ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}` 
+      : "Plan details missing!";
 
     const payBtn = document.getElementById("payBtn");
     const goBack = document.getElementById("goBack");
 
     if (!plan || !price || !email) {
       payBtn.disabled = true;
-      goBack.style.display = "block";
+      goBack.style.display = "inline-block";
       goBack.onclick = () => window.location.href = "index.html";
     }
 
