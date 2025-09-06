@@ -2,26 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Diet Plan</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .plan { display: none; padding: 15px; margin-top: 20px; border: 1px solid #ccc; border-radius: 10px; }
-    .expired { color: red; font-weight: bold; }
-    .active { color: green; font-weight: bold; }
-    .topbar { display: flex; justify-content: space-between; align-items: center; }
-    button { margin-top: 15px; padding: 10px 15px; cursor: pointer; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="topbar">
     <h1>Your Diet Plan</h1>
-    <button onclick="logout()">Logout</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
   </div>
 
-  <p id="status">Checking subscription...</p>
+  <p id="status" class="status-text">Checking subscription...</p>
 
   <!-- Weight Loss Plan -->
-  <div id="weightLoss" class="plan">
+  <div id="weightLoss" class="plan-card">
     <h2>🥗 Weight Loss (1500 Calorie)</h2>
     <ul>
       <li>Breakfast: Oats + 1 Boiled Egg</li>
@@ -32,7 +26,7 @@
   </div>
 
   <!-- Muscle Gain Plan -->
-  <div id="muscleGain" class="plan">
+  <div id="muscleGain" class="plan-card">
     <h2>💪 Muscle Gain (2000 Calorie)</h2>
     <ul>
       <li>Breakfast: 4 Egg Omelette + Brown Bread</li>
@@ -43,7 +37,7 @@
   </div>
 
   <!-- General Fitness Plan -->
-  <div id="fitness" class="plan">
+  <div id="fitness" class="plan-card">
     <h2>⚡ General Fitness</h2>
     <ul>
       <li>Breakfast: Poha/Upma</li>
@@ -53,21 +47,19 @@
     </ul>
   </div>
 
-  <button onclick="window.location.href='index.html'">Renew Subscription</button>
+  <button class="renew-btn" onclick="window.location.href='index.html'">Renew Subscription</button>
 
   <script>
     async function checkSubscription() {
       const email = localStorage.getItem("userEmail");
       const plan = localStorage.getItem("userPlan");
 
-      // Agar user login nahi hai
       if (!email) {
         alert("Please login first!");
         window.location.href = "login.html";
         return;
       }
 
-      // Agar plan choose hi nahi kiya
       if (!plan) {
         document.getElementById("status").innerHTML =
           "<span class='expired'>❌ No active plan found. Please subscribe first.</span>";

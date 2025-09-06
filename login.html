@@ -1,26 +1,36 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"/><title>Login / Register</title></head>
-<link rel="stylesheet" href="style.css">
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login / Register</title>
+  <link rel="stylesheet" href="style.css">
+</head>
 <body>
-  <h1>Login / Register</h1>
+  <h1 class="page-title">Login / Register</h1>
 
-  <!-- Register -->
-  <h2>Register</h2>
-  <form id="registerForm">
-    <input id="regName" type="text" required placeholder="Name" />
-    <input id="regEmail" type="email" required placeholder="Email" />
-    <input id="regPassword" type="password" required placeholder="Password" />
-    <button type="submit">Register</button>
-  </form>
+  <div class="auth-container">
+    <!-- Register -->
+    <div class="auth-card">
+      <h2>Register</h2>
+      <form id="registerForm">
+        <input id="regName" type="text" required placeholder="Name" />
+        <input id="regEmail" type="email" required placeholder="Email" />
+        <input id="regPassword" type="password" required placeholder="Password" />
+        <button type="submit">Register</button>
+      </form>
+    </div>
 
-  <!-- Login -->
-  <h2>Login</h2>
-  <form id="loginForm">
-    <input id="loginEmail" type="email" required placeholder="Email" />
-    <input id="loginPassword" type="password" required placeholder="Password" />
-    <button type="submit">Login</button>
-  </form>
+    <!-- Login -->
+    <div class="auth-card">
+      <h2>Login</h2>
+      <form id="loginForm">
+        <input id="loginEmail" type="email" required placeholder="Email" />
+        <input id="loginPassword" type="password" required placeholder="Password" />
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  </div>
 
   <script>
     const BASE = "https://diet-saas.onrender.com";

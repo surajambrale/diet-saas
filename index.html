@@ -1,34 +1,184 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
   <title>Select Plan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- ✅ Mobile scaling -->
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #121212;
+      color: #fff;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      color: #ffcc70;
+      font-size: 28px;
+    }
+
+    /* Plans Container */
+    .plans {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    /* Each Plan Card */
+    .plan-card {
+      background: #1e1e1e;
+      border-radius: 16px;
+      padding: 24px;
+      width: 300px;
+      max-width: 95%;
+      text-align: center;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .plan-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .plan-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffcc70;
+      margin-bottom: 10px;
+    }
+
+    .plan-price {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      text-align: left;
+      font-size: 15px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .plan-features li::before {
+      content: "✔️ ";
+      color: #4caf50;
+    }
+
+    .buy-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ff416c, #ff4b2b);
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .buy-btn:hover {
+      background: linear-gradient(135deg, #ff4b2b, #ff416c);
+    }
+
+    /* ✅ Responsive mobile screen */
+    @media (max-width: 768px) {
+      .plans {
+        flex-direction: column;   /* force vertical */
+        align-items: center;
+      }
+
+      .plan-card {
+        width: 90%;   /* almost full width on mobile */
+        max-width: 400px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .plan-title {
+        font-size: 20px;
+      }
+
+      .plan-price {
+        font-size: 18px;
+      }
+
+      .plan-features {
+        font-size: 14px;
+      }
+
+      .buy-btn {
+        font-size: 15px;
+        padding: 12px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Choose Plan</h1>
+  <h1>Choose Your Plan</h1>
 
-  <div>
-    <button onclick="selectPlan('Weight Loss', 499)">Weight Loss - ₹499</button>
-    <button onclick="selectPlan('Muscle Gain', 699)">Muscle Gain - ₹699</button>
-    <button onclick="selectPlan('General Fitness', 399)">General Fitness - ₹399</button>
+  <div class="plans">
+    <!-- Weight Loss Plan -->
+    <div class="plan-card">
+      <div class="plan-title">Weight Loss</div>
+      <div class="plan-price">₹499 / month</div>
+      <ul class="plan-features">
+        <li>Custom calorie deficit diet</li>
+        <li>Weekly weight check-in</li>
+        <li>Home & Gym workout guidance</li>
+        <li>WhatsApp Support</li>
+      </ul>
+      <button class="buy-btn" onclick="selectPlan('Weight Loss', 499)">Choose Plan</button>
+    </div>
+
+    <!-- Muscle Gain Plan -->
+    <div class="plan-card">
+      <div class="plan-title">Muscle Gain</div>
+      <div class="plan-price">₹699 / month</div>
+      <ul class="plan-features">
+        <li>High protein diet chart</li>
+        <li>Strength training schedule</li>
+        <li>Supplement guidance</li>
+        <li>Personalized progress tracking</li>
+      </ul>
+      <button class="buy-btn" onclick="selectPlan('Muscle Gain', 699)">Choose Plan</button>
+    </div>
+
+    <!-- General Fitness Plan -->
+    <div class="plan-card">
+      <div class="plan-title">General Fitness</div>
+      <div class="plan-price">₹399 / month</div>
+      <ul class="plan-features">
+        <li>Balanced nutrition plan</li>
+        <li>Basic workout routine</li>
+        <li>Improved stamina & flexibility</li>
+        <li>Lifestyle habit tracking</li>
+      </ul>
+      <button class="buy-btn" onclick="selectPlan('General Fitness', 399)">Choose Plan</button>
+    </div>
   </div>
 
   <script>
-    // call this when user clicks a plan
     function selectPlan(plan, price) {
-      // save to sessionStorage as primary (survives redirects in same tab)
       sessionStorage.setItem("selectedPlan", plan);
       sessionStorage.setItem("selectedPrice", String(price));
 
-      // If user logged in, we likely have email saved in localStorage (from login)
       const email = localStorage.getItem("userEmail") || "";
 
       if (!email) {
-        // not logged in -> send plan info to login so it can redirect to payment after login
         window.location.href = `login.html?plan=${encodeURIComponent(plan)}&price=${encodeURIComponent(price)}`;
       } else {
-        // already logged in -> go to payment page with params (URL ensures mobile works)
         window.location.href = `payment.html?plan=${encodeURIComponent(plan)}&price=${encodeURIComponent(price)}&email=${encodeURIComponent(email)}`;
       }
     }
