@@ -1,4 +1,4 @@
-/* ============ GLOBAL RESET ============ */
+/* ============ RESET ============ */
 * {
   margin: 0;
   padding: 0;
@@ -15,30 +15,30 @@ body {
   align-items: center;
   flex-direction: column;
   padding: 20px;
+  text-align: center;
 }
 
-/* ============ HEADING ============ */
+/* ============ HEADINGS ============ */
 h1, h2, h3 {
-  text-align: center;
   margin-bottom: 20px;
   color: #ffcc70;
+  word-wrap: break-word;
 }
 
-/* ============ CARD STYLING ============ */
+/* ============ CARD CONTAINER ============ */
 .card {
   background: #1e1e1e;
   border-radius: 14px;
-  padding: 28px;
-  margin: 18px auto;
-  width: 100%;
-  max-width: 420px;
-  text-align: center;
+  padding: 24px;
+  margin: 20px auto;
+  width: 95%;
+  max-width: 360px;   /* ✅ Mobile fit width */
   box-shadow: 0 6px 18px rgba(0,0,0,0.5);
   transition: transform 0.2s ease-in-out;
 }
 
 .card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px);
 }
 
 /* ============ INPUT FIELDS ============ */
@@ -50,7 +50,7 @@ input {
   border: none;
   background: #2a2a2a;
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 input:focus {
@@ -60,12 +60,12 @@ input:focus {
 /* ============ BUTTONS ============ */
 button {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   border: none;
   border-radius: 10px;
   background: linear-gradient(135deg, #ff416c, #ff4b2b);
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   transition: background 0.3s ease;
 }
@@ -74,7 +74,7 @@ button:hover {
   background: linear-gradient(135deg, #ff4b2b, #ff416c);
 }
 
-/* Logout button special */
+/* Logout button (special) */
 #logoutBtn {
   width: auto;
   padding: 12px 24px;
@@ -86,61 +86,46 @@ button:hover {
 a {
   color: #ffcc70;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 a:hover {
   text-decoration: underline;
 }
 
-/* ============ MOBILE RESPONSIVE ============ */
+/* ============ RESPONSIVE FIX ============ */
 @media (max-width: 768px) {
-  body {
-    padding: 18px;
-  }
-
   .card {
-    padding: 24px;
-    width: 95%;
-  }
-
-  h1 {
-    font-size: 26px;
-  }
-
-  h2 {
-    font-size: 22px;
-  }
-
-  button, input {
-    font-size: 18px;
-    padding: 14px;
-  }
-
-  a {
-    font-size: 18px;
-  }
-}
-
-@media (max-width: 480px) {
-  h1 {
-    font-size: 24px;
-  }
-
-  h2 {
-    font-size: 20px;
-  }
-
-  .card {
+    max-width: 340px;
     padding: 20px;
   }
 
+  h1 { font-size: 26px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 20px; }
+
   button, input {
-    font-size: 18px;
-    padding: 16px;
+    font-size: 16px;
+    padding: 14px;
   }
 
-  a {
-    font-size: 18px;
+  a { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+  .card {
+    max-width: 320px;
+    padding: 18px;
   }
+
+  h1 { font-size: 24px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+
+  button, input {
+    font-size: 16px;
+    padding: 14px;
+  }
+
+  a { font-size: 14px; }
 }
