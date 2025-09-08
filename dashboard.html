@@ -52,6 +52,8 @@
       </select>
       <label>Goal</label>
       <select id="goal"><option value="fatloss">Fat Loss</option><option value="muscle">Muscle Gain</option><option value="general">General Fitness</option></select>
+      <label>Diet Preference</label>
+      <select id="dietType"><option value="veg">Vegetarian</option><option value="nonveg">Non-Vegetarian</option></select>
 
       <button id="genBtn" class="btn">Generate Plan (Preview)</button>
     </div>
@@ -67,7 +69,7 @@
   </div>
 
 <script>
-  const BASE = "https://diet-saas.onrender.com"; // <-- change to http://localhost:5000 for local dev
+  const BASE = "https://diet-saas.onrender.com"; // <-- use http://localhost:5000 in local
   const email = localStorage.getItem("userEmail");
   const selectedPlan = sessionStorage.getItem("selectedPlan");
 
@@ -89,7 +91,6 @@
       const data = await res.json();
       if(data.active) {
         document.getElementById("subscriptionStatus").innerHTML = `✅ Subscription Active — Valid until ${new Date(data.expiry).toDateString()}`;
-        // load saved diet
         loadSavedDiet();
       } else {
         document.getElementById("subscriptionStatus").innerText = "❌ Subscription not found or expired. Please subscribe.";
@@ -119,7 +120,6 @@
     }
   }
 
-  // generate (preview)
   document.getElementById("genBtn").addEventListener("click", async () => {
     const height = Number(document.getElementById("height").value);
     const weight = Number(document.getElementById("weight").value);
@@ -127,9 +127,11 @@
     const gender = document.getElementById("gender").value;
     const activity = document.getElementById("activity").value;
     const goal = document.getElementById("goal").value;
+    const dietType = document.getElementById("dietType").value;
 
     if(!height || !weight || !age) return alert("Please fill height/weight/age");
 
+    // 🔥 Call backend generate-diet
     try {
       const res = await fetch(`${BASE}/generate-diet`, {
         method: "POST",
@@ -142,13 +144,13 @@
           weightKg: weight,
           heightCm: height,
           activityLevel: activity,
+          dietType,
           save: false
         })
       });
       const data = await res.json();
       if(!data.success) return alert("Error: "+(data.error||data.message));
       showGeneratedPlan(data.plan);
-      // show buttons
       document.getElementById("dietCard").style.display = "block";
     } catch (err) {
       console.error(err);
@@ -157,10 +159,11 @@
   });
 
   function showGeneratedPlan(plan) {
-    const gen = plan.generated;
-    document.getElementById("dietHeader").innerHTML = `<h2>Preview — ${plan.goal} • target ${plan.targetCalories} kcal</h2>
-      <div class="small">Macros target — Protein: ${plan.macrosTarget.protein_g}g • Carbs: ${plan.macrosTarget.carbs_g}g • Fats: ${plan.macrosTarget.fats_g}g</div>`;
-    const html = gen.meals.map(m => `
+    document.getElementById("dietHeader").innerHTML = `
+      <h2>Preview — ${plan.goal} • target ${plan.targetCalories} kcal</h2>
+      <div class="small">Protein: ${plan.macrosTarget.protein_g}g • Carbs: ${plan.macrosTarget.carbs_g}g • Fats: ${plan.macrosTarget.fats_g}g</div>`;
+    
+    const html = plan.generated.meals.map(m => `
       <div class="meal">
         <strong>${m.slot.toUpperCase()} — ${m.kcal} kcal</strong>
         <ul>${m.items.map(i=>`<li>${i.name} (${i.portion}) — ${i.calories} kcal</li>`).join("")}</ul>
@@ -168,7 +171,6 @@
     `).join("");
     document.getElementById("mealsContainer").innerHTML = html;
 
-    // Save button handler
     document.getElementById("saveBtn").onclick = async () => {
       try {
         const payload = { email, plan: {
@@ -207,8 +209,7 @@
     `).join("");
     document.getElementById("mealsContainer").innerHTML = html;
 
-    // edit button
-    document.getElementById("saveBtn").onclick = async () => {
+    document.getElementById("saveBtn").onclick = () => {
       alert("Saved already. Use Edit to change the plan.");
     };
     document.getElementById("editBtn").onclick = () => {

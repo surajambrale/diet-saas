@@ -1,0 +1,16 @@
+[
+  { "slot": "breakfast", "dietType": "veg", "name": "Oats with Milk", "portion": "1 bowl (40g oats + 200ml milk)", "calories": 250, "protein_g": 10, "carbs_g": 40, "fats_g": 5, "goal": "general" },
+  { "slot": "breakfast", "dietType": "nonveg", "name": "Egg Omelette", "portion": "3 egg whites + 1 whole egg", "calories": 210, "protein_g": 18, "carbs_g": 2, "fats_g": 10, "goal": "general" },
+
+  { "slot": "snack", "dietType": "veg", "name": "Apple + Almonds", "portion": "1 medium apple + 10 almonds", "calories": 180, "protein_g": 4, "carbs_g": 25, "fats_g": 8, "goal": "general" },
+  { "slot": "snack", "dietType": "nonveg", "name": "Boiled Eggs", "portion": "2 whole eggs", "calories": 150, "protein_g": 12, "carbs_g": 1, "fats_g": 10, "goal": "general" },
+
+  { "slot": "lunch", "dietType": "veg", "name": "Brown Rice + Dal + Salad", "portion": "1 cup rice + 1 cup dal + salad", "calories": 400, "protein_g": 15, "carbs_g": 70, "fats_g": 8, "goal": "fatloss" },
+  { "slot": "lunch", "dietType": "nonveg", "name": "Brown Rice + Grilled Chicken + Salad", "portion": "1 cup rice + 150g chicken + salad", "calories": 450, "protein_g": 35, "carbs_g": 55, "fats_g": 10, "goal": "fatloss" },
+
+  { "slot": "dinner", "dietType": "veg", "name": "2 Roti + Paneer + Veggies", "portion": "2 roti + 100g paneer + sabji", "calories": 380, "protein_g": 20, "carbs_g": 45, "fats_g": 12, "goal": "general" },
+  { "slot": "dinner", "dietType": "nonveg", "name": "2 Roti + Chicken Curry + Veggies", "portion": "2 roti + 150g chicken + sabji", "calories": 420, "protein_g": 32, "carbs_g": 40, "fats_g": 14, "goal": "general" },
+
+  { "slot": "breakfast", "dietType": "veg", "name": "Poha + Peanuts", "portion": "1 bowl", "calories": 300, "protein_g": 8, "carbs_g": 50, "fats_g": 8, "goal": "fatloss" },
+  { "slot": "snack", "dietType": "veg", "name": "Greek Yogurt + Berries", "portion": "150g", "calories": 140, "protein_g": 12, "carbs_g": 14, "fats_g": 3, "goal": "muscle" }
+]
