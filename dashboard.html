@@ -1,215 +1,223 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-    h1 { color: #333; }
-    #assessmentForm, #dietPlan, #subscriptionStatus { margin-top: 20px; }
-    input, select, button {
-      display: block;
-      margin: 10px 0;
-      padding: 8px;
-      font-size: 1rem;
-      width: 100%;
-      max-width: 400px;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover { background: #0056b3; }
-    #logoutBtn {
-      background: #ff4d4d;
-      margin-top: 20px;
-    }
-    #logoutBtn:hover { background: #cc0000; }
+    :root { --bg:#f5f7fb; --card:#fff; --accent:#007bff; --muted:#666; }
+    body { font-family: Arial, sans-serif; background: var(--bg); margin:0; padding:16px; }
+    .container { max-width:720px; margin:10px auto; }
+    .top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    h1 { margin:0; color:#222; font-size:20px; }
+    .btn { background:var(--accent); color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+    .card { background:var(--card); padding:14px; border-radius:10px; margin-top:14px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    label { display:block; margin-top:10px; color:var(--muted); font-weight:600; }
+    input, select { width:100%; padding:10px; margin-top:6px; border-radius:8px; border:1px solid #e6e9ee; }
+    .meal { border-radius:8px; padding:10px; background:#fafcff; margin-top:8px; }
+    ul { padding-left:18px; }
+    .small { font-size:0.9rem; color:var(--muted); }
+    @media (max-width:480px) { .top { flex-direction:column; align-items:stretch } .btn{ width:100% } }
   </style>
 </head>
 <body>
-  <h1>My Dashboard</h1>
+  <div class="container">
+    <div class="top">
+      <h1>My Dashboard</h1>
+      <div>
+        <button id="logoutBtn" class="btn">Logout</button>
+      </div>
+    </div>
 
-  <!-- Subscription Status -->
-  <div id="subscriptionStatus">Checking subscription...</div>
+    <div id="subscriptionStatus" class="card">Checking subscription...</div>
 
-  <!-- Assessment Form -->
-  <div id="assessmentForm" style="display:none;">
-    <h2>Body Assessment</h2>
-    <input type="number" id="height" placeholder="Height (cm)">
-    <input type="number" id="weight" placeholder="Weight (kg)">
-    <input type="number" id="age" placeholder="Age">
-    <select id="gender">
-      <option value="male">Male</option>
-      <option value="female">Female</option>
-    </select>
-    <select id="goal">
-      <option value="fatloss">Fat Loss</option>
-      <option value="muscle">Muscle Gain</option>
-      <option value="fitness">General Fitness</option>
-    </select>
-    <button onclick="generatePlan()">Generate Plan</button>
+    <div id="assessmentCard" class="card" style="display:none;">
+      <h2>Body Assessment</h2>
+      <div class="small">Fill details to generate a personalized diet</div>
+      <label>Height (cm)</label>
+      <input id="height" type="number" placeholder="e.g. 175">
+      <label>Weight (kg)</label>
+      <input id="weight" type="number" placeholder="e.g. 70">
+      <label>Age</label>
+      <input id="age" type="number" placeholder="e.g. 28">
+      <label>Gender</label>
+      <select id="gender"><option value="male">Male</option><option value="female">Female</option></select>
+      <label>Activity Level</label>
+      <select id="activity">
+        <option value="sedentary">Sedentary (little/no exercise)</option>
+        <option value="light">Light (1-3 days/week)</option>
+        <option value="moderate" selected>Moderate (3-5 days/week)</option>
+        <option value="active">Active (6-7 days/week)</option>
+        <option value="very_active">Very active (physically heavy job)</option>
+      </select>
+      <label>Goal</label>
+      <select id="goal"><option value="fatloss">Fat Loss</option><option value="muscle">Muscle Gain</option><option value="general">General Fitness</option></select>
+
+      <button id="genBtn" class="btn">Generate Plan (Preview)</button>
+    </div>
+
+    <div id="dietCard" class="card" style="display:none;">
+      <div id="dietHeader"></div>
+      <div id="mealsContainer"></div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button id="saveBtn" class="btn">Save Plan</button>
+        <button id="editBtn" class="btn" style="background:#6c757d">Edit</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Generated Plan -->
-  <div id="dietPlan" style="display:none;"></div>
+<script>
+  const BASE = "https://diet-saas.onrender.com"; // <-- change to http://localhost:5000 for local dev
+  const email = localStorage.getItem("userEmail");
+  const selectedPlan = sessionStorage.getItem("selectedPlan");
 
-  <!-- 🔹 Added logout button -->
-  <button id="logoutBtn">🚪 Logout</button>
+  document.getElementById("logoutBtn").addEventListener("click", ()=> {
+    localStorage.clear(); sessionStorage.clear(); window.location.href = "login.html";
+  });
 
-  <!-- Your JS -->
-  <script>
-    const BASE = "https://diet-saas.onrender.com";
-    const email = localStorage.getItem("userEmail");
-    const plan = sessionStorage.getItem("selectedPlan");
-
-    // 🔴 Logout
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.href = "login.html";
-    });
-
-    // Check subscription
-    async function checkSubscription() {
-      if (!email || !plan) {
-        document.getElementById("subscriptionStatus").innerText = "❌ No plan selected.";
-        return;
-      }
-      try {
-        const res = await fetch(`${BASE}/check-subscription`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, plan })
-        });
-        const data = await res.json();
-
-        if (data.active) {
-          document.getElementById("subscriptionStatus").innerHTML =
-            `✅ Subscription Active <br> Valid until: ${new Date(data.expiry).toDateString()}`;
-          
-          loadSavedDiet();
-        } else {
-          document.getElementById("subscriptionStatus").innerText = "❌ Subscription expired or not found.";
-        }
-      } catch (err) {
-        console.error("Error:", err);
-        document.getElementById("subscriptionStatus").innerText = "⚠️ Error checking subscription.";
-      }
+  async function checkSubscription() {
+    if(!email || !selectedPlan) {
+      document.getElementById("subscriptionStatus").innerText = "❌ No plan selected. Please select a plan first.";
+      return;
     }
-
-    // Load saved diet
-    async function loadSavedDiet() {
-      try {
-        const res = await fetch(`${BASE}/get-diet`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        });
-        const data = await res.json();
-
-        if (data.plan) {
-          showDietPlan(data.plan);
-        } else {
-          document.getElementById("assessmentForm").style.display = "block";
-        }
-      } catch (err) {
-        console.error("Error fetching saved diet:", err);
-        document.getElementById("assessmentForm").style.display = "block";
-      }
-    }
-
-    // Save diet
-    async function saveDiet(planData) {
-      try {
-        await fetch(`${BASE}/save-diet`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, plan: planData })
-        });
-      } catch (err) {
-        console.error("Error saving diet:", err);
-      }
-    }
-
-    // Generate plan
-    function generatePlan() {
-      const h = document.getElementById("height").value;
-      const w = document.getElementById("weight").value;
-      const a = document.getElementById("age").value;
-      const g = document.getElementById("gender").value;
-      const goal = document.getElementById("goal").value;
-
-      if (!h || !w || !a) {
-        alert("Please fill all details");
-        return;
-      }
-
-      let bmr = (g === "male")
-        ? 10 * w + 6.25 * h - 5 * a + 5
-        : 10 * w + 6.25 * h - 5 * a - 161;
-
-      let calories = goal === "fatloss" ? bmr - 500
-                    : goal === "muscle" ? bmr + 400
-                    : bmr;
-
-      let meals = [];
-      if (goal === "fatloss") {
-        meals = [
-          "Morning: Green Tea + 5 Almonds",
-          "Breakfast: Oats + 2 Egg Whites",
-          "Lunch: Brown Rice + Grilled Chicken + Salad",
-          "Snack: 1 Fruit + Green Tea",
-          "Dinner: 2 Roti + Paneer/Chicken + Veggies"
-        ];
-      } else if (goal === "muscle") {
-        meals = [
-          "Morning: Milk + 5 Almonds + 2 Dates",
-          "Breakfast: Oats + 5 Egg Whites + 1 Whole Egg",
-          "Lunch: Brown Rice + Chicken + Dal + Veggies",
-          "Snack: Peanut Butter Sandwich + Banana",
-          "Dinner: 3 Roti + Paneer/Chicken/Fish + Salad"
-        ];
+    try {
+      const res = await fetch(`${BASE}/check-subscription`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ email, plan: selectedPlan })
+      });
+      const data = await res.json();
+      if(data.active) {
+        document.getElementById("subscriptionStatus").innerHTML = `✅ Subscription Active — Valid until ${new Date(data.expiry).toDateString()}`;
+        // load saved diet
+        loadSavedDiet();
       } else {
-        meals = [
-          "Morning: Warm Water + Lemon",
-          "Breakfast: Poha/Upma + Green Tea",
-          "Lunch: 2 Roti + Sabji + Dal",
-          "Snack: 1 Fruit",
-          "Dinner: 2 Roti + Paneer/Chicken + Salad"
-        ];
+        document.getElementById("subscriptionStatus").innerText = "❌ Subscription not found or expired. Please subscribe.";
       }
-
-      const planData = { goal, calories: calories.toFixed(0), meals };
-
-      showDietPlan(planData);
-      saveDiet(planData);
+    } catch (err) {
+      console.error(err);
+      document.getElementById("subscriptionStatus").innerText = "⚠️ Error connecting to server.";
     }
+  }
 
-    // Show diet
-    function showDietPlan(planData) {
-      document.getElementById("assessmentForm").style.display = "none";
-      document.getElementById("dietPlan").style.display = "block";
-      document.getElementById("dietPlan").innerHTML = `
-        <h2>Your ${planData.goal === "fatloss" ? "Fat Loss" : planData.goal === "muscle" ? "Muscle Gain" : "Fitness"} Diet</h2>
-        <p><b>Target Calories:</b> ${planData.calories} kcal</p>
-        <h3>Meals:</h3>
-        <ul>${planData.meals.map(m => `<li>${m}</li>`).join("")}</ul>
-        <br>
-        <button onclick="editPlan()">✏️ Edit Plan</button>
-      `;
+  async function loadSavedDiet() {
+    try {
+      const res = await fetch(`${BASE}/get-diet`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if(data.success && data.plan) {
+        showDietSaved(data.plan);
+      } else {
+        document.getElementById("assessmentCard").style.display = "block";
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById("assessmentCard").style.display = "block";
     }
+  }
 
-    function editPlan() {
-      document.getElementById("dietPlan").style.display = "none";
-      document.getElementById("assessmentForm").style.display = "block";
+  // generate (preview)
+  document.getElementById("genBtn").addEventListener("click", async () => {
+    const height = Number(document.getElementById("height").value);
+    const weight = Number(document.getElementById("weight").value);
+    const age = Number(document.getElementById("age").value);
+    const gender = document.getElementById("gender").value;
+    const activity = document.getElementById("activity").value;
+    const goal = document.getElementById("goal").value;
+
+    if(!height || !weight || !age) return alert("Please fill height/weight/age");
+
+    try {
+      const res = await fetch(`${BASE}/generate-diet`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          email,
+          plan: goal,
+          age,
+          gender,
+          weightKg: weight,
+          heightCm: height,
+          activityLevel: activity,
+          save: false
+        })
+      });
+      const data = await res.json();
+      if(!data.success) return alert("Error: "+(data.error||data.message));
+      showGeneratedPlan(data.plan);
+      // show buttons
+      document.getElementById("dietCard").style.display = "block";
+    } catch (err) {
+      console.error(err);
+      alert("Server error");
     }
+  });
 
-    checkSubscription();
-  </script>
+  function showGeneratedPlan(plan) {
+    const gen = plan.generated;
+    document.getElementById("dietHeader").innerHTML = `<h2>Preview — ${plan.goal} • target ${plan.targetCalories} kcal</h2>
+      <div class="small">Macros target — Protein: ${plan.macrosTarget.protein_g}g • Carbs: ${plan.macrosTarget.carbs_g}g • Fats: ${plan.macrosTarget.fats_g}g</div>`;
+    const html = gen.meals.map(m => `
+      <div class="meal">
+        <strong>${m.slot.toUpperCase()} — ${m.kcal} kcal</strong>
+        <ul>${m.items.map(i=>`<li>${i.name} (${i.portion}) — ${i.calories} kcal</li>`).join("")}</ul>
+      </div>
+    `).join("");
+    document.getElementById("mealsContainer").innerHTML = html;
+
+    // Save button handler
+    document.getElementById("saveBtn").onclick = async () => {
+      try {
+        const payload = { email, plan: {
+          goal: plan.goal,
+          calories: plan.targetCalories,
+          macros: plan.macrosTarget,
+          meals: plan.generated.meals
+        }};
+        const r = await fetch(`${BASE}/save-diet`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        if(d.success) alert("Plan saved!");
+        else alert("Save failed");
+      } catch (e) { console.error(e); alert("Error saving"); }
+    };
+
+    document.getElementById("editBtn").onclick = () => {
+      document.getElementById("dietCard").style.display = "none";
+      document.getElementById("assessmentCard").style.display = "block";
+    };
+  }
+
+  function showDietSaved(planDoc) {
+    document.getElementById("assessmentCard").style.display = "none";
+    document.getElementById("dietCard").style.display = "block";
+    document.getElementById("dietHeader").innerHTML = `<h2>Saved plan — ${planDoc.goal} • ${planDoc.calories} kcal</h2>`;
+    const meals = planDoc.meals || [];
+    const html = meals.map(m => `
+      <div class="meal">
+        <strong>${m.slot.toUpperCase()} — ${m.kcal || 0} kcal</strong>
+        <ul>${(m.items || []).map(i=>`<li>${i.name} (${i.portion}) — ${i.calories} kcal</li>`).join("")}</ul>
+      </div>
+    `).join("");
+    document.getElementById("mealsContainer").innerHTML = html;
+
+    // edit button
+    document.getElementById("saveBtn").onclick = async () => {
+      alert("Saved already. Use Edit to change the plan.");
+    };
+    document.getElementById("editBtn").onclick = () => {
+      document.getElementById("dietCard").style.display = "none";
+      document.getElementById("assessmentCard").style.display = "block";
+    };
+  }
+
+  checkSubscription();
+</script>
 </body>
 </html>
