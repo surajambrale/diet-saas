@@ -5,95 +5,106 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Diet Plan</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .diet-container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .calories {
+      text-align: center;
+      font-size: 1.2rem;
+      margin: 10px 0;
+      color: #007bff;
+    }
+    ul {
+      margin-top: 15px;
+      padding-left: 20px;
+      line-height: 1.6;
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      margin-top: 20px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
 </head>
 <body>
-  <div class="topbar">
-    <h1>Your Diet Plan</h1>
-    <button class="logout-btn" onclick="logout()">Logout</button>
+  <div class="diet-container">
+    <h1>Your Personalized Diet</h1>
+    <p class="calories" id="caloriesInfo"></p>
+    <h2 id="planTitle"></h2>
+    <ul id="dietList"></ul>
+    <button onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
   </div>
-
-  <p id="status" class="status-text">Checking subscription...</p>
-
-  <!-- Weight Loss Plan -->
-  <div id="weightLoss" class="plan-card">
-    <h2>🥗 Weight Loss (1500 Calorie)</h2>
-    <ul>
-      <li>Breakfast: Oats + 1 Boiled Egg</li>
-      <li>Lunch: 2 Roti + Sabzi + Salad</li>
-      <li>Snack: Green Tea + Fruit</li>
-      <li>Dinner: Grilled Chicken/Fish + Vegetables</li>
-    </ul>
-  </div>
-
-  <!-- Muscle Gain Plan -->
-  <div id="muscleGain" class="plan-card">
-    <h2>💪 Muscle Gain (2000 Calorie)</h2>
-    <ul>
-      <li>Breakfast: 4 Egg Omelette + Brown Bread</li>
-      <li>Lunch: Rice + Chicken Curry + Salad</li>
-      <li>Snack: Banana + Peanut Butter</li>
-      <li>Dinner: Paneer/Chicken + Chapati + Veggies</li>
-    </ul>
-  </div>
-
-  <!-- General Fitness Plan -->
-  <div id="fitness" class="plan-card">
-    <h2>⚡ General Fitness</h2>
-    <ul>
-      <li>Breakfast: Poha/Upma</li>
-      <li>Lunch: 2 Chapati + Dal + Veggies</li>
-      <li>Snack: Buttermilk + Nuts</li>
-      <li>Dinner: Light Sabzi + Roti</li>
-    </ul>
-  </div>
-
-  <button class="renew-btn" onclick="window.location.href='index.html'">Renew Subscription</button>
 
   <script>
-    async function checkSubscription() {
-      const email = localStorage.getItem("userEmail");
-      const plan = localStorage.getItem("userPlan");
+    // URL params se values fetch
+    const urlParams = new URLSearchParams(window.location.search);
+    const goal = urlParams.get("goal");   // fatloss / muscle
+    const cal = urlParams.get("cal");
 
-      if (!email) {
-        alert("Please login first!");
-        window.location.href = "login.html";
-        return;
-      }
+    document.getElementById("caloriesInfo").innerText = `Target Calories: ${cal} kcal`;
 
-      if (!plan) {
-        document.getElementById("status").innerHTML =
-          "<span class='expired'>❌ No active plan found. Please subscribe first.</span>";
-        return;
-      }
+    const dietList = document.getElementById("dietList");
+    const planTitle = document.getElementById("planTitle");
 
-      const res = await fetch("https://diet-saas.onrender.com/check-subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, plan })
-      });
-      const data = await res.json();
+    let meals = [];
 
-      if (data.active) {
-        document.getElementById("status").innerHTML =
-          "<span class='active'>✅ Subscription Active (till " +
-          new Date(data.expiry).toLocaleDateString() + ")</span>";
-
-        if (plan === "Weight Loss") document.getElementById("weightLoss").style.display = "block";
-        if (plan === "Muscle Gain") document.getElementById("muscleGain").style.display = "block";
-        if (plan === "General Fitness") document.getElementById("fitness").style.display = "block";
-      } else {
-        document.getElementById("status").innerHTML =
-          "<span class='expired'>❌ " + data.message + "</span>";
-      }
+    if (goal === "fatloss") {
+      planTitle.innerText = "Fat Loss Diet Plan";
+      meals = [
+        "Morning: Green Tea + 5 Almonds",
+        "Breakfast: Oats + 2 Egg Whites",
+        "Lunch: Brown Rice + Grilled Chicken + Salad",
+        "Snack: 1 Fruit + Green Tea",
+        "Dinner: 2 Roti + Paneer/Chicken + Veggies"
+      ];
+    } else if (goal === "muscle") {
+      planTitle.innerText = "Muscle Gain Diet Plan";
+      meals = [
+        "Morning: Milk + 5 Almonds + 2 Dates",
+        "Breakfast: Oats + 5 Egg Whites + 1 Whole Egg",
+        "Lunch: Brown Rice + Chicken + Dal + Veggies",
+        "Snack: Peanut Butter Sandwich + Banana",
+        "Dinner: 3 Roti + Paneer/Chicken/Fish + Salad"
+      ];
+    } else {
+      planTitle.innerText = "General Fitness Diet";
+      meals = [
+        "Morning: Warm Water + Lemon",
+        "Breakfast: Poha/Upma + Green Tea",
+        "Lunch: 2 Roti + Sabji + Dal",
+        "Snack: 1 Fruit",
+        "Dinner: 2 Roti + Paneer/Chicken + Salad"
+      ];
     }
 
-    function logout() {
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userPlan");
-      window.location.href = "login.html";
-    }
-
-    checkSubscription();
+    // List render karo
+    dietList.innerHTML = meals.map(m => `<li>${m}</li>`).join("");
   </script>
 </body>
 </html>
