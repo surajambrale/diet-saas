@@ -1,159 +1,215 @@
-<script>
-  const BASE = "https://diet-saas.onrender.com";
-  const email = localStorage.getItem("userEmail");
-  const plan = sessionStorage.getItem("selectedPlan");
-
-  // 🔴 Logout
-  document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.href = "login.html";
-  });
-
-  // Check subscription
-  async function checkSubscription() {
-    if (!email || !plan) {
-      document.getElementById("subscriptionStatus").innerText = "❌ No plan selected.";
-      return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { color: #333; }
+    #assessmentForm, #dietPlan, #subscriptionStatus { margin-top: 20px; }
+    input, select, button {
+      display: block;
+      margin: 10px 0;
+      padding: 8px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 400px;
     }
-    try {
-      const res = await fetch(`${BASE}/check-subscription`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, plan })
-      });
-      const data = await res.json();
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover { background: #0056b3; }
+    #logoutBtn {
+      background: #ff4d4d;
+      margin-top: 20px;
+    }
+    #logoutBtn:hover { background: #cc0000; }
+  </style>
+</head>
+<body>
+  <h1>My Dashboard</h1>
 
-      if (data.active) {
-        document.getElementById("subscriptionStatus").innerHTML =
-          `✅ Subscription Active <br> Valid until: ${new Date(data.expiry).toDateString()}`;
-        
-        // Check if user has a saved diet
-        loadSavedDiet();
-      } else {
-        document.getElementById("subscriptionStatus").innerText = "❌ Subscription expired or not found.";
+  <!-- Subscription Status -->
+  <div id="subscriptionStatus">Checking subscription...</div>
+
+  <!-- Assessment Form -->
+  <div id="assessmentForm" style="display:none;">
+    <h2>Body Assessment</h2>
+    <input type="number" id="height" placeholder="Height (cm)">
+    <input type="number" id="weight" placeholder="Weight (kg)">
+    <input type="number" id="age" placeholder="Age">
+    <select id="gender">
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
+    <select id="goal">
+      <option value="fatloss">Fat Loss</option>
+      <option value="muscle">Muscle Gain</option>
+      <option value="fitness">General Fitness</option>
+    </select>
+    <button onclick="generatePlan()">Generate Plan</button>
+  </div>
+
+  <!-- Generated Plan -->
+  <div id="dietPlan" style="display:none;"></div>
+
+  <!-- 🔹 Added logout button -->
+  <button id="logoutBtn">🚪 Logout</button>
+
+  <!-- Your JS -->
+  <script>
+    const BASE = "https://diet-saas.onrender.com";
+    const email = localStorage.getItem("userEmail");
+    const plan = sessionStorage.getItem("selectedPlan");
+
+    // 🔴 Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "login.html";
+    });
+
+    // Check subscription
+    async function checkSubscription() {
+      if (!email || !plan) {
+        document.getElementById("subscriptionStatus").innerText = "❌ No plan selected.";
+        return;
       }
-    } catch (err) {
-      console.error("Error:", err);
-      document.getElementById("subscriptionStatus").innerText = "⚠️ Error checking subscription.";
+      try {
+        const res = await fetch(`${BASE}/check-subscription`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, plan })
+        });
+        const data = await res.json();
+
+        if (data.active) {
+          document.getElementById("subscriptionStatus").innerHTML =
+            `✅ Subscription Active <br> Valid until: ${new Date(data.expiry).toDateString()}`;
+          
+          loadSavedDiet();
+        } else {
+          document.getElementById("subscriptionStatus").innerText = "❌ Subscription expired or not found.";
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        document.getElementById("subscriptionStatus").innerText = "⚠️ Error checking subscription.";
+      }
     }
-  }
 
-  // 🔹 Load saved diet if exists
-  async function loadSavedDiet() {
-    try {
-      const res = await fetch(`${BASE}/get-diet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
+    // Load saved diet
+    async function loadSavedDiet() {
+      try {
+        const res = await fetch(`${BASE}/get-diet`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
 
-      if (data.plan) {
-        showDietPlan(data.plan);
-      } else {
+        if (data.plan) {
+          showDietPlan(data.plan);
+        } else {
+          document.getElementById("assessmentForm").style.display = "block";
+        }
+      } catch (err) {
+        console.error("Error fetching saved diet:", err);
         document.getElementById("assessmentForm").style.display = "block";
       }
-    } catch (err) {
-      console.error("Error fetching saved diet:", err);
+    }
+
+    // Save diet
+    async function saveDiet(planData) {
+      try {
+        await fetch(`${BASE}/save-diet`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, plan: planData })
+        });
+      } catch (err) {
+        console.error("Error saving diet:", err);
+      }
+    }
+
+    // Generate plan
+    function generatePlan() {
+      const h = document.getElementById("height").value;
+      const w = document.getElementById("weight").value;
+      const a = document.getElementById("age").value;
+      const g = document.getElementById("gender").value;
+      const goal = document.getElementById("goal").value;
+
+      if (!h || !w || !a) {
+        alert("Please fill all details");
+        return;
+      }
+
+      let bmr = (g === "male")
+        ? 10 * w + 6.25 * h - 5 * a + 5
+        : 10 * w + 6.25 * h - 5 * a - 161;
+
+      let calories = goal === "fatloss" ? bmr - 500
+                    : goal === "muscle" ? bmr + 400
+                    : bmr;
+
+      let meals = [];
+      if (goal === "fatloss") {
+        meals = [
+          "Morning: Green Tea + 5 Almonds",
+          "Breakfast: Oats + 2 Egg Whites",
+          "Lunch: Brown Rice + Grilled Chicken + Salad",
+          "Snack: 1 Fruit + Green Tea",
+          "Dinner: 2 Roti + Paneer/Chicken + Veggies"
+        ];
+      } else if (goal === "muscle") {
+        meals = [
+          "Morning: Milk + 5 Almonds + 2 Dates",
+          "Breakfast: Oats + 5 Egg Whites + 1 Whole Egg",
+          "Lunch: Brown Rice + Chicken + Dal + Veggies",
+          "Snack: Peanut Butter Sandwich + Banana",
+          "Dinner: 3 Roti + Paneer/Chicken/Fish + Salad"
+        ];
+      } else {
+        meals = [
+          "Morning: Warm Water + Lemon",
+          "Breakfast: Poha/Upma + Green Tea",
+          "Lunch: 2 Roti + Sabji + Dal",
+          "Snack: 1 Fruit",
+          "Dinner: 2 Roti + Paneer/Chicken + Salad"
+        ];
+      }
+
+      const planData = { goal, calories: calories.toFixed(0), meals };
+
+      showDietPlan(planData);
+      saveDiet(planData);
+    }
+
+    // Show diet
+    function showDietPlan(planData) {
+      document.getElementById("assessmentForm").style.display = "none";
+      document.getElementById("dietPlan").style.display = "block";
+      document.getElementById("dietPlan").innerHTML = `
+        <h2>Your ${planData.goal === "fatloss" ? "Fat Loss" : planData.goal === "muscle" ? "Muscle Gain" : "Fitness"} Diet</h2>
+        <p><b>Target Calories:</b> ${planData.calories} kcal</p>
+        <h3>Meals:</h3>
+        <ul>${planData.meals.map(m => `<li>${m}</li>`).join("")}</ul>
+        <br>
+        <button onclick="editPlan()">✏️ Edit Plan</button>
+      `;
+    }
+
+    function editPlan() {
+      document.getElementById("dietPlan").style.display = "none";
       document.getElementById("assessmentForm").style.display = "block";
     }
-  }
 
-  // 🔹 Save diet to backend
-  async function saveDiet(planData) {
-    try {
-      await fetch(`${BASE}/save-diet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, plan: planData })
-      });
-    } catch (err) {
-      console.error("Error saving diet:", err);
-    }
-  }
-
-  // Generate Diet Plan
-  function generatePlan() {
-    const h = document.getElementById("height").value;
-    const w = document.getElementById("weight").value;
-    const a = document.getElementById("age").value;
-    const g = document.getElementById("gender").value;
-    const goal = document.getElementById("goal").value;
-
-    if (!h || !w || !a) {
-      alert("Please fill all details");
-      return;
-    }
-
-    // Simple calorie formula
-    let bmr = (g === "male")
-      ? 10 * w + 6.25 * h - 5 * a + 5
-      : 10 * w + 6.25 * h - 5 * a - 161;
-
-    let calories = goal === "fatloss" ? bmr - 500
-                  : goal === "muscle" ? bmr + 400
-                  : bmr;
-
-    let meals = [];
-    if (goal === "fatloss") {
-      meals = [
-        "Morning: Green Tea + 5 Almonds",
-        "Breakfast: Oats + 2 Egg Whites",
-        "Lunch: Brown Rice + Grilled Chicken + Salad",
-        "Snack: 1 Fruit + Green Tea",
-        "Dinner: 2 Roti + Paneer/Chicken + Veggies"
-      ];
-    } else if (goal === "muscle") {
-      meals = [
-        "Morning: Milk + 5 Almonds + 2 Dates",
-        "Breakfast: Oats + 5 Egg Whites + 1 Whole Egg",
-        "Lunch: Brown Rice + Chicken + Dal + Veggies",
-        "Snack: Peanut Butter Sandwich + Banana",
-        "Dinner: 3 Roti + Paneer/Chicken/Fish + Salad"
-      ];
-    } else {
-      meals = [
-        "Morning: Warm Water + Lemon",
-        "Breakfast: Poha/Upma + Green Tea",
-        "Lunch: 2 Roti + Sabji + Dal",
-        "Snack: 1 Fruit",
-        "Dinner: 2 Roti + Paneer/Chicken + Salad"
-      ];
-    }
-
-    const planData = {
-      goal,
-      calories: calories.toFixed(0),
-      meals
-    };
-
-    // Show plan
-    showDietPlan(planData);
-
-    // Save plan to backend
-    saveDiet(planData);
-  }
-
-  // Show diet on page
-  function showDietPlan(planData) {
-    document.getElementById("assessmentForm").style.display = "none";
-    document.getElementById("dietPlan").style.display = "block";
-    document.getElementById("dietPlan").innerHTML = `
-      <h2>Your ${planData.goal === "fatloss" ? "Fat Loss" : planData.goal === "muscle" ? "Muscle Gain" : "Fitness"} Diet</h2>
-      <p><b>Target Calories:</b> ${planData.calories} kcal</p>
-      <h3>Meals:</h3>
-      <ul>${planData.meals.map(m => `<li>${m}</li>`).join("")}</ul>
-      <br>
-      <button onclick="editPlan()">✏️ Edit Plan</button>
-    `;
-  }
-
-  // 🔹 Edit Plan Function
-  function editPlan() {
-    document.getElementById("dietPlan").style.display = "none";
-    document.getElementById("assessmentForm").style.display = "block";
-  }
-
-  checkSubscription();
-</script>
+    checkSubscription();
+  </script>
+</body>
+</html>
