@@ -1,4 +1,4 @@
-// server.js (clean + updated)
+// server.js (final updated with vegetarian filter)
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -80,7 +80,8 @@ app.post("/login", async (req, res) => {
     if (!user) return res.json({ success: false, message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.json({ success: false, message: "Invalid password" });
+    if (!isMatch)
+      return res.json({ success: false, message: "Invalid password" });
 
     res.json({
       success: true,
@@ -224,6 +225,7 @@ app.post("/generate-diet", async (req, res) => {
       weightKg,
       heightCm,
       activityLevel = "moderate",
+      vegetarian = false, // <--- new flag
       save = false,
     } = req.body;
 
@@ -275,9 +277,9 @@ app.post("/generate-diet", async (req, res) => {
     for (const slot of slots) {
       let filter = { slot };
 
-      // breakfast → non-veg exclude
-      if (slot === "breakfast") {
-        filter = { slot, "items.foodCategory": { $ne: "nonveg" } };
+      // agar vegetarian true hai → nonveg exclude
+      if (vegetarian) {
+        filter["items.foodCategory"] = { $ne: "nonveg" };
       }
 
       let candidates = await Meal.find(filter).lean();
