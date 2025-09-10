@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 
-const FoodSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  category: { type: String, required: true }, // e.g. protein, carb, veg, fruit, fat, dairy, snack, grain
-  portion: { type: String, default: "100g" },
-  calories: { type: Number, required: true }, // kcal per portion
-  protein: { type: Number, default: 0 }, // grams per portion
-  carbs: { type: Number, default: 0 },
-  fat: { type: Number, default: 0 }
-}, { timestamps: true });
+const foodSchema = new mongoose.Schema({
+  name: String,
+  category: String, // e.g. "veg", "nonveg", "dairy"
+  portion: String,  // "100g", "1 cup"
+  calories: Number,
+  protein: Number,
+  carbs: Number,
+  fat: Number
+});
 
-module.exports = mongoose.model("Food", FoodSchema);
+module.exports = mongoose.model("Food", foodSchema);

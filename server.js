@@ -12,7 +12,7 @@ const User = require("./models/User");
 const Subscription = require("./models/subscription");
 const Food = require("./models/Food");
 const Diet = require("./models/Diet");
-const Meal = require("./models/Meal"); // ✅ agar tumne Meal model banaya hai
+const Meal = require("./models/Meal");
 
 // Express app
 const app = express();
@@ -37,7 +37,7 @@ app.use("/api/meals", mealsRoutes);
 
 // Razorpay setup
 const razorpay = new Razorpay({
-  key_id: "rzp_test_RDOq87kgys57h2", // replace with live key when ready
+  key_id: "rzp_test_RDOq87kgys57h2", // replace with live key
   key_secret: "m36sZB7IqA2HeD2B51YybL7P",
 });
 
@@ -226,6 +226,7 @@ app.post("/generate-diet", async (req, res) => {
       activityLevel = "moderate",
       save = false,
     } = req.body;
+
     if (!plan || !age || !weightKg || !heightCm || !activityLevel) {
       return res
         .status(400)
@@ -269,23 +270,47 @@ app.post("/generate-diet", async (req, res) => {
 
     // 4) Fetch meals dynamically
     const slots = ["breakfast", "lunch", "snack", "dinner"];
-    const meals = [];
+    let meals = [];
 
     for (const slot of slots) {
-      let candidates = await Meal.find({ slot }).lean();
+      let filter = { slot };
+
+      // breakfast → non-veg exclude
+      if (slot === "breakfast") {
+        filter = { slot, "items.foodCategory": { $ne: "nonveg" } };
+      }
+
+      let candidates = await Meal.find(filter).lean();
       if (!candidates.length) continue;
+
       const pick = candidates[Math.floor(Math.random() * candidates.length)];
+
       meals.push({
         slot,
         items: [pick],
-        kcal: pick.calories,
-        protein: pick.protein_g,
-        carbs: pick.carbs_g,
-        fats: pick.fats_g,
+        kcal: pick.calories || 0,
+        protein: pick.protein_g || 0,
+        carbs: pick.carbs_g || 0,
+        fats: pick.fats_g || 0,
       });
     }
 
-    // 5) Totals
+    // 5) Scale meals to match target calories
+    let totalCalories = meals.reduce((sum, m) => sum + m.kcal, 0);
+    if (totalCalories > 0) {
+      const ratio = targetCalories / totalCalories;
+      meals = meals.map((m) => {
+        return {
+          ...m,
+          kcal: Math.round(m.kcal * ratio),
+          protein: Math.round(m.protein * ratio),
+          carbs: Math.round(m.carbs * ratio),
+          fats: Math.round(m.fats * ratio),
+        };
+      });
+    }
+
+    // 6) Final totals
     const total = meals.reduce(
       (acc, m) => {
         acc.calories += m.kcal || 0;
@@ -304,6 +329,7 @@ app.post("/generate-diet", async (req, res) => {
       generated: { meals, total },
     };
 
+    // 7) Save diet if requested
     if (save && email) {
       const doc = await Diet.findOneAndUpdate(
         { email },
@@ -316,6 +342,9 @@ app.post("/generate-diet", async (req, res) => {
             slot: m.slot,
             items: m.items,
             kcal: m.kcal,
+            protein: m.protein,
+            carbs: m.carbs,
+            fats: m.fats,
           })),
         },
         { upsert: true, new: true }
