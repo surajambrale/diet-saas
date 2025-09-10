@@ -1,4 +1,4 @@
-// server.js (final updated with vegetarian filter)
+// server.js (final updated with vegetarian filter fixed)
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -225,7 +225,7 @@ app.post("/generate-diet", async (req, res) => {
       weightKg,
       heightCm,
       activityLevel = "moderate",
-      vegetarian = false, // <--- new flag
+      vegetarian = false, // <--- flag
       save = false,
     } = req.body;
 
@@ -270,19 +270,22 @@ app.post("/generate-diet", async (req, res) => {
     );
     const carbs_g = Math.round(carbsCalories / 4);
 
-    // 4) Fetch meals dynamically
+    // 4) Fetch meals dynamically with veg filter
     const slots = ["breakfast", "lunch", "snack", "dinner"];
     let meals = [];
 
     for (const slot of slots) {
-      let filter = { slot };
+      let candidates;
 
-      // agar vegetarian true hai → nonveg exclude
       if (vegetarian) {
-        filter["items.foodCategory"] = { $ne: "nonveg" };
+        candidates = await Meal.find({
+          slot,
+          "items.category": "veg",
+        }).lean();
+      } else {
+        candidates = await Meal.find({ slot }).lean();
       }
 
-      let candidates = await Meal.find(filter).lean();
       if (!candidates.length) continue;
 
       const pick = candidates[Math.floor(Math.random() * candidates.length)];
