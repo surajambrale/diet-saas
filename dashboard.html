@@ -18,7 +18,6 @@
     ul { padding-left:18px; }
     .small { font-size:0.9rem; color:var(--muted); }
     .totals { margin-top:12px; padding:10px; border-radius:8px; background:#eef4ff; font-weight:600; }
-    canvas { margin-top:16px; }
     @media (max-width:480px) { .top { flex-direction:column; align-items:stretch } .btn{ width:100% } }
   </style>
 </head>
@@ -62,20 +61,12 @@
       <div id="dietHeader"></div>
       <div id="mealsContainer"></div>
       <div id="totalsContainer" class="totals"></div>
-
-      <!-- Chart Section -->
-      <canvas id="macrosChart" height="180"></canvas>
-      <canvas id="caloriesChart" height="180"></canvas>
-
       <div style="margin-top:12px; display:flex; gap:8px;">
         <button id="saveBtn" class="btn">Save Plan</button>
         <button id="editBtn" class="btn" style="background:#6c757d">Edit</button>
       </div>
     </div>
   </div>
-
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
   const BASE = "https://diet-saas.onrender.com"; // <-- http://localhost:5000 for local
@@ -190,36 +181,6 @@
     `).join("");
   }
 
-  function renderCharts(totals) {
-    const ctx1 = document.getElementById("macrosChart").getContext("2d");
-    const ctx2 = document.getElementById("caloriesChart").getContext("2d");
-
-    new Chart(ctx1, {
-      type: "pie",
-      data: {
-        labels: ["Protein", "Carbs", "Fats"],
-        datasets: [{
-          data: [totals.protein, totals.carbs, totals.fats],
-          backgroundColor: ["#007bff","#28a745","#ffc107"]
-        }]
-      },
-      options: { plugins: { legend: { position:"bottom" } } }
-    });
-
-    new Chart(ctx2, {
-      type: "bar",
-      data: {
-        labels: ["Calories"],
-        datasets: [{
-          label: "Total Calories",
-          data: [totals.kcal],
-          backgroundColor: "#ff5733"
-        }]
-      },
-      options: { plugins: { legend: { display:false } } }
-    });
-  }
-
   function showGeneratedPlan(plan) {
     document.getElementById("dietHeader").innerHTML = `
       <h2>Preview — ${plan.goal} • target ${plan.targetCalories} kcal</h2>
@@ -230,8 +191,6 @@
     const totals = calcTotals(plan.generated.meals);
     document.getElementById("totalsContainer").innerHTML =
       `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
-
-    renderCharts(totals);
 
     document.getElementById("saveBtn").onclick = async () => {
       try {
@@ -269,8 +228,6 @@
     const totals = calcTotals(planDoc.meals||[]);
     document.getElementById("totalsContainer").innerHTML =
       `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
-
-    renderCharts(totals);
 
     document.getElementById("saveBtn").onclick = () => {
       alert("Saved already. Use Edit to change the plan.");
