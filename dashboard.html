@@ -17,6 +17,8 @@
     .meal { border-radius:8px; padding:10px; background:#fafcff; margin-top:8px; }
     ul { padding-left:18px; }
     .small { font-size:0.9rem; color:var(--muted); }
+    .totals { margin-top:12px; padding:10px; border-radius:8px; background:#eef4ff; font-weight:600; }
+    canvas { margin-top:16px; }
     @media (max-width:480px) { .top { flex-direction:column; align-items:stretch } .btn{ width:100% } }
   </style>
 </head>
@@ -24,9 +26,7 @@
   <div class="container">
     <div class="top">
       <h1>My Dashboard</h1>
-      <div>
-        <button id="logoutBtn" class="btn">Logout</button>
-      </div>
+      <div><button id="logoutBtn" class="btn">Logout</button></div>
     </div>
 
     <div id="subscriptionStatus" class="card">Checking subscription...</div>
@@ -61,6 +61,12 @@
     <div id="dietCard" class="card" style="display:none;">
       <div id="dietHeader"></div>
       <div id="mealsContainer"></div>
+      <div id="totalsContainer" class="totals"></div>
+
+      <!-- Chart Section -->
+      <canvas id="macrosChart" height="180"></canvas>
+      <canvas id="caloriesChart" height="180"></canvas>
+
       <div style="margin-top:12px; display:flex; gap:8px;">
         <button id="saveBtn" class="btn">Save Plan</button>
         <button id="editBtn" class="btn" style="background:#6c757d">Edit</button>
@@ -68,8 +74,11 @@
     </div>
   </div>
 
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-  const BASE = "https://diet-saas.onrender.com"; // <-- use http://localhost:5000 in local
+  const BASE = "https://diet-saas.onrender.com"; // <-- http://localhost:5000 for local
   const email = localStorage.getItem("userEmail");
   const selectedPlan = sessionStorage.getItem("selectedPlan");
 
@@ -131,7 +140,6 @@
 
     if(!height || !weight || !age) return alert("Please fill height/weight/age");
 
-    // 🔥 Call backend generate-diet
     try {
       const res = await fetch(`${BASE}/generate-diet`, {
         method: "POST",
@@ -158,25 +166,79 @@
     }
   });
 
+  function calcTotals(meals) {
+    let total = { kcal:0, protein:0, carbs:0, fats:0 };
+    meals.forEach(m => {
+      (m.items||[]).forEach(i => {
+        total.kcal += i.calories || 0;
+        total.protein += i.protein || 0;
+        total.carbs += i.carbs || 0;
+        total.fats += i.fat || 0;
+      });
+    });
+    return total;
+  }
+
+  function renderMeals(meals) {
+    return meals.map(m => `
+      <div class="meal">
+        <strong>${m.slot.toUpperCase()} — ${m.kcal || 0} kcal</strong>
+        <ul>${(m.items||[]).map(i=>
+          `<li>${i.name} (${i.portion}) — ${i.calories} kcal | P:${i.protein}g C:${i.carbs}g F:${i.fat}g</li>`
+        ).join("")}</ul>
+      </div>
+    `).join("");
+  }
+
+  function renderCharts(totals) {
+    const ctx1 = document.getElementById("macrosChart").getContext("2d");
+    const ctx2 = document.getElementById("caloriesChart").getContext("2d");
+
+    new Chart(ctx1, {
+      type: "pie",
+      data: {
+        labels: ["Protein", "Carbs", "Fats"],
+        datasets: [{
+          data: [totals.protein, totals.carbs, totals.fats],
+          backgroundColor: ["#007bff","#28a745","#ffc107"]
+        }]
+      },
+      options: { plugins: { legend: { position:"bottom" } } }
+    });
+
+    new Chart(ctx2, {
+      type: "bar",
+      data: {
+        labels: ["Calories"],
+        datasets: [{
+          label: "Total Calories",
+          data: [totals.kcal],
+          backgroundColor: "#ff5733"
+        }]
+      },
+      options: { plugins: { legend: { display:false } } }
+    });
+  }
+
   function showGeneratedPlan(plan) {
     document.getElementById("dietHeader").innerHTML = `
       <h2>Preview — ${plan.goal} • target ${plan.targetCalories} kcal</h2>
-      <div class="small">Protein: ${plan.macrosTarget.protein_g}g • Carbs: ${plan.macrosTarget.carbs_g}g • Fats: ${plan.macrosTarget.fats_g}g</div>`;
-    
-    const html = plan.generated.meals.map(m => `
-      <div class="meal">
-        <strong>${m.slot.toUpperCase()} — ${m.kcal} kcal</strong>
-        <ul>${m.items.map(i=>`<li>${i.name} (${i.portion}) — ${i.calories} kcal</li>`).join("")}</ul>
-      </div>
-    `).join("");
-    document.getElementById("mealsContainer").innerHTML = html;
+      <div class="small">Target: Protein ${plan.macrosTarget.protein_g}g • Carbs ${plan.macrosTarget.carbs_g}g • Fats ${plan.macrosTarget.fats_g}g</div>`;
+
+    document.getElementById("mealsContainer").innerHTML = renderMeals(plan.generated.meals);
+
+    const totals = calcTotals(plan.generated.meals);
+    document.getElementById("totalsContainer").innerHTML =
+      `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
+
+    renderCharts(totals);
 
     document.getElementById("saveBtn").onclick = async () => {
       try {
         const payload = { email, plan: {
           goal: plan.goal,
-          calories: plan.targetCalories,
-          macros: plan.macrosTarget,
+          calories: totals.kcal,
+          macros: totals,
           meals: plan.generated.meals
         }};
         const r = await fetch(`${BASE}/save-diet`, {
@@ -199,15 +261,16 @@
   function showDietSaved(planDoc) {
     document.getElementById("assessmentCard").style.display = "none";
     document.getElementById("dietCard").style.display = "block";
-    document.getElementById("dietHeader").innerHTML = `<h2>Saved plan — ${planDoc.goal} • ${planDoc.calories} kcal</h2>`;
-    const meals = planDoc.meals || [];
-    const html = meals.map(m => `
-      <div class="meal">
-        <strong>${m.slot.toUpperCase()} — ${m.kcal || 0} kcal</strong>
-        <ul>${(m.items || []).map(i=>`<li>${i.name} (${i.portion}) — ${i.calories} kcal</li>`).join("")}</ul>
-      </div>
-    `).join("");
-    document.getElementById("mealsContainer").innerHTML = html;
+    document.getElementById("dietHeader").innerHTML =
+      `<h2>Saved plan — ${planDoc.goal} • ${planDoc.calories} kcal</h2>`;
+
+    document.getElementById("mealsContainer").innerHTML = renderMeals(planDoc.meals||[]);
+
+    const totals = calcTotals(planDoc.meals||[]);
+    document.getElementById("totalsContainer").innerHTML =
+      `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
+
+    renderCharts(totals);
 
     document.getElementById("saveBtn").onclick = () => {
       alert("Saved already. Use Edit to change the plan.");
