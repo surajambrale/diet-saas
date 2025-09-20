@@ -7,29 +7,20 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Reset + Shake Fix */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
-      overflow-x: hidden; /* ✅ No horizontal scroll */
-      box-sizing: border-box;
+      overflow-x: hidden;
       font-family: Arial, sans-serif;
       background: #f8f9fa;
     }
-    *, *::before, *::after {
-      box-sizing: inherit;
-    }
-
-    /* Page Title */
     h1 {
       text-align: center;
       font-size: 2rem;
       color: #333;
       margin: 20px 0;
     }
-
-    /* Plan Details */
     #planDetails {
       background: #fff;
       border-radius: 10px;
@@ -42,8 +33,6 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       color: #000;
     }
-
-    /* Buttons */
     button {
       display: block;
       width: 90%;
@@ -60,31 +49,12 @@
       background: #f60505;
       color: white;
     }
-    #payBtn:hover {
-      background: #0056b3;
-    }
+    #payBtn:hover { background: #0056b3; }
     #goBack {
       background: #6c757d;
       color: white;
     }
-    #goBack:hover {
-      background: #5a6268;
-    }
-
-    /* Responsive */
-    @media (max-width: 480px) {
-      h1 {
-        font-size: 1.8rem;
-      }
-      #planDetails {
-        font-size: 1.1rem;
-        padding: 15px;
-      }
-      button {
-        font-size: 1.2rem;
-        padding: 16px;
-      }
-    }
+    #goBack:hover { background: #5a6268; }
   </style>
 </head>
 <body>
@@ -96,24 +66,38 @@
   <script>
     const BASE = "https://diet-saas.onrender.com"; // backend
 
-    // 1) Try URL params first
+    // URL or session storage
     const urlParams = new URLSearchParams(window.location.search);
-    let plan = urlParams.get("plan");
-    let price = urlParams.get("price");
-    let email = urlParams.get("email");
-
-    // 2) Fallback to sessionStorage
-    if (!plan) plan = sessionStorage.getItem("selectedPlan");
-    if (!price) price = sessionStorage.getItem("selectedPrice");
-    if (!email) email = sessionStorage.getItem("userEmail") || localStorage.getItem("userEmail");
-
-    console.log("Payment page values -> plan:", plan, "price:", price, "email:", email);
-    document.getElementById("planDetails").innerText = plan 
-      ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}` 
-      : "Plan details missing!";
+    let plan = urlParams.get("plan") || sessionStorage.getItem("selectedPlan");
+    let price = urlParams.get("price") || sessionStorage.getItem("selectedPrice");
+    let email = urlParams.get("email") || sessionStorage.getItem("userEmail") || localStorage.getItem("userEmail");
 
     const payBtn = document.getElementById("payBtn");
     const goBack = document.getElementById("goBack");
+
+    // Show plan info
+    document.getElementById("planDetails").innerText = plan 
+      ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}`
+      : "Plan details missing!";
+
+    // === Check user login + active plan ===
+    (async function checkUserAndPlan() {
+      if (!email) {
+        alert("Please login or register before buying a plan.");
+        window.location.href = "register.html"; 
+        return;
+      }
+      try {
+        const res = await fetch(`${BASE}/check-subscription?email=${email}`);
+        const data = await res.json();
+        if (data.active) {
+          alert(`You already have an active plan (${data.plan}).`);
+          window.location.href = "dashboard.html";
+        }
+      } catch (err) {
+        console.error("Check subscription error:", err);
+      }
+    })();
 
     if (!plan || !price || !email) {
       payBtn.disabled = true;
@@ -121,6 +105,7 @@
       goBack.onclick = () => window.location.href = "index.html";
     }
 
+    // === Razorpay checkout ===
     payBtn.addEventListener("click", async () => {
       try {
         const amountNum = Number(price);
@@ -134,7 +119,6 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ amount: amountNum, plan: plan, email: email })
         });
-
         const order = await createRes.json();
         if (!order || !order.id) {
           console.error("Order creation failed:", order);
@@ -143,7 +127,7 @@
         }
 
         const options = {
-          key: "rzp_test_RDOq87kgys57h2",
+          key: "rzp_test_RDOq87kgys57h2", 
           amount: order.amount,
           currency: order.currency,
           name: "Diet Subscription",

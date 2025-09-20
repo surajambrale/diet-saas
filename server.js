@@ -1,4 +1,4 @@
-// server.js (updated with rice de-duplication + fats ratio adjustable)
+// server.js (final cleaned & updated)
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -12,13 +12,7 @@ const Subscription = require("./models/subscription");
 const Food = require("./models/Food");
 const Diet = require("./models/Diet");
 
-try {
-  require.resolve("./models/Meal");
-} catch (e) {
-  // no-op
-}
-
-// App setup
+// Express app
 const app = express();
 app.use(express.json());
 app.use(
@@ -178,35 +172,30 @@ app.post("/generate-diet", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // 1) BMR & TDEE
+    // --- BMR + TDEE ---
     const bmr = gender === "female"
       ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161
       : 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
 
     const activityMap = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
-    const factor = activityMap[activityLevel] || 1.55;
-    const tdee = Math.round(bmr * factor);
+    const tdee = Math.round(bmr * (activityMap[activityLevel] || 1.55));
 
-    // 2) Target calories
+    // --- Calories & Macros ---
     let targetCalories = tdee;
-    if (/fat|loss/i.test(plan)) targetCalories = tdee - 500;
-    else if (/muscle|gain/i.test(plan)) targetCalories = tdee + 350;
+    if (/fat|loss/i.test(plan)) targetCalories -= 500;
+    else if (/muscle|gain/i.test(plan)) targetCalories += 350;
     if (targetCalories < 1200) targetCalories = 1200;
 
-    // 3) Macros targets
-    const proteinPerKg = /muscle|gain/i.test(plan) ? 2.2 : /fat|loss/i.test(plan) ? 2.0 : 1.6;
-    const protein_g = Math.round(weightKg * proteinPerKg);
+    const protein_g = Math.round(weightKg * (/muscle|gain/i.test(plan) ? 2.2 : /fat|loss/i.test(plan) ? 2.0 : 1.6));
     const caloriesFromProtein = protein_g * 4;
-
-    const fatsCalories = Math.round(targetCalories * 0.15); // 🔥 reduced from 0.2 (20%) to 15%
+    const fatsCalories = Math.round(targetCalories * 0.15);
     const fats_g = Math.round(fatsCalories / 9);
-
     const carbsCalories = Math.max(0, targetCalories - (caloriesFromProtein + fatsCalories));
     const carbs_g = Math.round(carbsCalories / 4);
 
     const isVegetarian = (dietType === "veg" || dietType === "vegetarian");
 
-    // helper for candidates
+    // --- Generate Meals ---
     const getCandidates = async (categories) => {
       const q = { category: { $in: categories } };
       if (isVegetarian) q.$or = [{ type: "veg" }, { type: "both" }];
@@ -216,8 +205,6 @@ app.post("/generate-diet", async (req, res) => {
     const ratios = { breakfast: 0.25, lunch: 0.35, snack: 0.10, dinner: 0.30 };
     const slots = Object.keys(ratios);
     const generatedMeals = [];
-
-    // 🔥 keep track of already used rice
     const usedRice = new Set();
 
     for (const slot of slots) {
@@ -248,9 +235,8 @@ app.post("/generate-diet", async (req, res) => {
       while ((running < slotTarget * 0.85 || items.length < 2) && idx < pool.length && items.length < 5) {
         const f = pool[idx++];
 
-        // 🔥 rice deduplication
         if (f.name.toLowerCase().includes("rice")) {
-          if (usedRice.size > 0) continue; 
+          if (usedRice.size > 0) continue;
           usedRice.add("rice");
         }
 
@@ -291,7 +277,7 @@ app.post("/generate-diet", async (req, res) => {
       });
     }
 
-    // scale meals
+    // --- Scale Meals ---
     const currentTotalCalories = generatedMeals.reduce((s, m) => s + (m.kcal || 0), 0) || 0;
     if (currentTotalCalories > 0) {
       const scale = targetCalories / currentTotalCalories;
