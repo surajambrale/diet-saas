@@ -1,4 +1,4 @@
-// server.js (updated - generate-diet uses Food collection, veg filter fixed)
+// server.js (updated with rice de-duplication + fats ratio adjustable)
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -11,9 +11,8 @@ const User = require("./models/User");
 const Subscription = require("./models/subscription");
 const Food = require("./models/Food");
 const Diet = require("./models/Diet");
-// (You can keep Meal model if you need it elsewhere)
+
 try {
-  // optional; if you have a Meal model keep it, else ignore
   require.resolve("./models/Meal");
 } catch (e) {
   // no-op
@@ -21,7 +20,7 @@ try {
 
 // App setup
 const app = express();
-app.use(express.json()); // modern replacement for bodyParser
+app.use(express.json());
 app.use(
   cors({
     origin: [
@@ -34,7 +33,7 @@ app.use(
   })
 );
 
-// Razorpay config (test keys shown — replace when going live)
+// Razorpay config
 const razorpay = new Razorpay({
   key_id: "rzp_test_RDOq87kgys57h2",
   key_secret: "m36sZB7IqA2HeD2B51YybL7P",
@@ -63,7 +62,8 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ success: false, message: "Email & password required" });
+    if (!email || !password)
+      return res.status(400).json({ success: false, message: "Email & password required" });
 
     const user = await User.findOne({ email });
     if (!user) return res.json({ success: false, message: "User not found" });
@@ -99,7 +99,8 @@ app.post("/create-order", async (req, res) => {
 app.post("/verify-payment", async (req, res) => {
   try {
     const { name, email, plan, paymentId } = req.body;
-    if (!name || !email || !plan || !paymentId) return res.status(400).json({ success: false, message: "Missing fields" });
+    if (!name || !email || !plan || !paymentId)
+      return res.status(400).json({ success: false, message: "Missing fields" });
 
     const startDate = new Date();
     const expiryDate = new Date();
@@ -132,11 +133,12 @@ app.post("/check-subscription", async (req, res) => {
   }
 });
 
-/* ---------------- FOOD (admin add / list) ---------------- */
+/* ---------------- FOOD ---------------- */
 app.post("/admin/food", async (req, res) => {
   try {
     const { name, category, portion, calories, protein, carbs, fat, type } = req.body;
-    if (!name || !category || calories == null) return res.status(400).json({ success: false, message: "name/category/calories required" });
+    if (!name || !category || calories == null)
+      return res.status(400).json({ success: false, message: "name/category/calories required" });
 
     const food = new Food({ name, category, portion, calories, protein, carbs, fat, type });
     await food.save();
@@ -157,10 +159,7 @@ app.get("/foods", async (req, res) => {
   }
 });
 
-/* ---------------- DIET GENERATOR (uses Food collection) ----------------
-   Input: { email?, plan, age, gender, weightKg, heightCm, activityLevel, dietType: "veg"|"nonveg", save }
-   Output: plan with targetCalories, macrosTarget and generated meals (each meal contains list of food items with nutrition)
-*/
+/* ---------------- DIET GENERATOR ---------------- */
 app.post("/generate-diet", async (req, res) => {
   try {
     const {
@@ -171,7 +170,7 @@ app.post("/generate-diet", async (req, res) => {
       weightKg,
       heightCm,
       activityLevel = "moderate",
-      dietType = "nonveg", // from frontend: 'veg' or 'nonveg'
+      dietType = "nonveg",
       save = false,
     } = req.body;
 
@@ -179,7 +178,7 @@ app.post("/generate-diet", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // 1) BMR & TDEE (Mifflin St Jeor)
+    // 1) BMR & TDEE
     const bmr = gender === "female"
       ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161
       : 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
@@ -188,73 +187,73 @@ app.post("/generate-diet", async (req, res) => {
     const factor = activityMap[activityLevel] || 1.55;
     const tdee = Math.round(bmr * factor);
 
-    // 2) Target calories by goal
+    // 2) Target calories
     let targetCalories = tdee;
     if (/fat|loss/i.test(plan)) targetCalories = tdee - 500;
     else if (/muscle|gain/i.test(plan)) targetCalories = tdee + 350;
     if (targetCalories < 1200) targetCalories = 1200;
 
-    // 3) Macros targets (simple split)
+    // 3) Macros targets
     const proteinPerKg = /muscle|gain/i.test(plan) ? 2.2 : /fat|loss/i.test(plan) ? 2.0 : 1.6;
     const protein_g = Math.round(weightKg * proteinPerKg);
     const caloriesFromProtein = protein_g * 4;
-    const fatsCalories = Math.round(targetCalories * 0.25);
+
+    const fatsCalories = Math.round(targetCalories * 0.15); // 🔥 reduced from 0.2 (20%) to 15%
     const fats_g = Math.round(fatsCalories / 9);
+
     const carbsCalories = Math.max(0, targetCalories - (caloriesFromProtein + fatsCalories));
     const carbs_g = Math.round(carbsCalories / 4);
 
-    // 4) Build meals from Food DB.
-    //    Strategy: for each slot pick 2-3 items from categories appropriate for slot.
-    //    Use dietType to filter out non-veg items for vegetarian users.
     const isVegetarian = (dietType === "veg" || dietType === "vegetarian");
 
-    // helper to fetch candidate foods by categories with optional veg filter
+    // helper for candidates
     const getCandidates = async (categories) => {
       const q = { category: { $in: categories } };
-      if (isVegetarian) {
-        // Food model has `type` field: "veg" | "non-veg" | "both"
-        q.$or = [{ type: "veg" }, { type: "both" }];
-      }
+      if (isVegetarian) q.$or = [{ type: "veg" }, { type: "both" }];
       return await Food.find(q).lean();
     };
 
-    // ratios per slot (sum to 1)
     const ratios = { breakfast: 0.25, lunch: 0.35, snack: 0.10, dinner: 0.30 };
     const slots = Object.keys(ratios);
     const generatedMeals = [];
 
+    // 🔥 keep track of already used rice
+    const usedRice = new Set();
+
     for (const slot of slots) {
       const slotTarget = Math.round(targetCalories * ratios[slot]);
-
-      // pick categories that make sense per slot
       let categoriesForSlot = [];
+
       if (slot === "breakfast") categoriesForSlot = ["protein", "carb", "dairy", "fruit"];
       else if (slot === "lunch" || slot === "dinner") categoriesForSlot = ["protein", "carb", "veg", "fat"];
       else if (slot === "snack") categoriesForSlot = ["snack", "fruit", "fat", "dairy"];
 
       const candidates = await getCandidates(categoriesForSlot);
-
-      // If not enough candidates, expand to any foods (filtered by veg)
-      let pool = candidates && candidates.length ? candidates.slice() : await getCandidates(["protein","carb","veg","fruit","dairy","fat","snack"]);
+      let pool = candidates.length ? candidates.slice() : await getCandidates(["protein","carb","veg","fruit","dairy","fat","snack"]);
 
       if (!pool.length) {
-        // fallback: empty meal
         generatedMeals.push({ slot, items: [], kcal: 0, protein_g: 0, carbs_g: 0, fats_g: 0 });
         continue;
       }
 
-      // select items until approx slotTarget reached (but keep 2-4 items)
-      const items = [];
-      // shuffle pool
+      // shuffle
       for (let i = pool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [pool[i], pool[j]] = [pool[j], pool[i]];
       }
 
-      let running = 0;
-      let idx = 0;
+      const items = [];
+      let running = 0, idx = 0;
+
       while ((running < slotTarget * 0.85 || items.length < 2) && idx < pool.length && items.length < 5) {
         const f = pool[idx++];
+
+        // 🔥 rice deduplication
+        if (f.name.toLowerCase().includes("rice")) {
+          if (usedRice.size > 0) continue; 
+          usedRice.add("rice");
+        }
+
         items.push({
           id: f._id,
           name: f.name,
@@ -269,13 +268,11 @@ app.post("/generate-diet", async (req, res) => {
         running += f.calories || 0;
       }
 
-      // if running > slotTarget*1.5, trim last
       while (running > slotTarget * 1.5 && items.length > 1) {
         const removed = items.pop();
         running -= removed.calories || 0;
       }
 
-      // compute slot totals
       const slotTotals = items.reduce((acc, it) => {
         acc.calories += it.calories || 0;
         acc.protein += it.protein || 0;
@@ -294,7 +291,7 @@ app.post("/generate-diet", async (req, res) => {
       });
     }
 
-    // 5) Scale across meals to match target calories (preserve proportions)
+    // scale meals
     const currentTotalCalories = generatedMeals.reduce((s, m) => s + (m.kcal || 0), 0) || 0;
     if (currentTotalCalories > 0) {
       const scale = targetCalories / currentTotalCalories;
@@ -306,7 +303,6 @@ app.post("/generate-diet", async (req, res) => {
       });
     }
 
-    // 6) Final totals
     const finalTotal = generatedMeals.reduce((acc, m) => {
       acc.calories += m.kcal || 0;
       acc.protein += m.protein_g || 0;
@@ -322,7 +318,6 @@ app.post("/generate-diet", async (req, res) => {
       generated: { meals: generatedMeals, total: finalTotal },
     };
 
-    // 7) Save if requested
     if (save && email) {
       const doc = await Diet.findOneAndUpdate(
         { email },

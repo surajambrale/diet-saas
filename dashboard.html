@@ -28,8 +28,10 @@
       <div><button id="logoutBtn" class="btn">Logout</button></div>
     </div>
 
+    <!-- Subscription status -->
     <div id="subscriptionStatus" class="card">Checking subscription...</div>
 
+    <!-- Assessment form -->
     <div id="assessmentCard" class="card" style="display:none;">
       <h2>Body Assessment</h2>
       <div class="small">Fill details to generate a personalized diet</div>
@@ -57,6 +59,7 @@
       <button id="genBtn" class="btn">Generate Plan (Preview)</button>
     </div>
 
+    <!-- Diet plan -->
     <div id="dietCard" class="card" style="display:none;">
       <div id="dietHeader"></div>
       <div id="mealsContainer"></div>
@@ -69,14 +72,16 @@
   </div>
 
 <script>
-  const BASE = "https://diet-saas.onrender.com"; // <-- http://localhost:5000 for local
+  const BASE = "https://diet-saas.onrender.com"; // change to http://localhost:5000 when testing locally
   const email = localStorage.getItem("userEmail");
   const selectedPlan = sessionStorage.getItem("selectedPlan");
 
+  // logout
   document.getElementById("logoutBtn").addEventListener("click", ()=> {
     localStorage.clear(); sessionStorage.clear(); window.location.href = "login.html";
   });
 
+  // ------------------- Subscription check -------------------
   async function checkSubscription() {
     if(!email || !selectedPlan) {
       document.getElementById("subscriptionStatus").innerText = "❌ No plan selected. Please select a plan first.";
@@ -89,11 +94,20 @@
         body: JSON.stringify({ email, plan: selectedPlan })
       });
       const data = await res.json();
+
       if(data.active) {
-        document.getElementById("subscriptionStatus").innerHTML = `✅ Subscription Active — Valid until ${new Date(data.expiry).toDateString()}`;
+        // ✅ Active subscription
+        document.getElementById("subscriptionStatus").innerHTML =
+          `✅ Subscription Active — Valid until ${new Date(data.expiry).toDateString()}`;
+        // load diet / assessment
         loadSavedDiet();
       } else {
-        document.getElementById("subscriptionStatus").innerText = "❌ Subscription not found or expired. Please subscribe.";
+        // ❌ Expired or not found
+        document.getElementById("subscriptionStatus").innerHTML =
+          "❌ Subscription not found or expired.<br><br><a href='plans.html'><button class='btn'>Subscribe Now</button></a>";
+        // Hide diet/assessment cards
+        document.getElementById("assessmentCard").style.display = "none";
+        document.getElementById("dietCard").style.display = "none";
       }
     } catch (err) {
       console.error(err);
@@ -101,6 +115,7 @@
     }
   }
 
+  // ------------------- Load saved diet -------------------
   async function loadSavedDiet() {
     try {
       const res = await fetch(`${BASE}/get-diet`, {
@@ -120,6 +135,7 @@
     }
   }
 
+  // ------------------- Generate new plan -------------------
   document.getElementById("genBtn").addEventListener("click", async () => {
     const height = Number(document.getElementById("height").value);
     const weight = Number(document.getElementById("weight").value);
@@ -157,6 +173,7 @@
     }
   });
 
+  // ------------------- Helpers -------------------
   function calcTotals(meals) {
     let total = { kcal:0, protein:0, carbs:0, fats:0 };
     meals.forEach(m => {
@@ -238,6 +255,7 @@
     };
   }
 
+  // init
   checkSubscription();
 </script>
 </body>
