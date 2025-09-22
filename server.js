@@ -114,7 +114,6 @@ app.post("/verify-payment", async (req, res) => {
     if (!name || !email || !plan || !paymentId)
       return res.status(400).json({ success: false, message: "Missing fields" });
 
-    // ✅ 1-Month Subscription
     const startDate = new Date();
     const expiryDate = new Date();
     expiryDate.setMonth(startDate.getMonth() + 1);
@@ -194,37 +193,18 @@ app.get("/foods", async (req, res) => {
   }
 });
 
-/* ---------------- DIET GENERATOR ---------------- */
+/* ---------------- DIET GENERATOR (with meals) ---------------- */
 app.post("/generate-diet", async (req, res) => {
   try {
-    const {
-      email,
-      plan,
-      age,
-      gender,
-      weightKg,
-      heightCm,
-      activityLevel = "moderate",
-      dietType = "nonveg",
-      save = false,
-    } = req.body;
-
+    const { email, plan, age, gender, weightKg, heightCm, activityLevel="moderate", dietType="nonveg", save=false } = req.body;
     if (!plan || !age || !weightKg || !heightCm)
       return res.status(400).json({ success: false, message: "Missing required fields" });
 
-    const bmr =
-      gender === "female"
-        ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161
-        : 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+    const bmr = gender === "female"
+      ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161
+      : 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
 
-    const activityMap = {
-      sedentary: 1.2,
-      light: 1.375,
-      moderate: 1.55,
-      active: 1.725,
-      very_active: 1.9,
-    };
-
+    const activityMap = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 };
     const tdee = Math.round(bmr * (activityMap[activityLevel] || 1.55));
 
     let targetCalories = tdee;
@@ -232,28 +212,35 @@ app.post("/generate-diet", async (req, res) => {
     else if (/muscle|gain/i.test(plan)) targetCalories += 350;
     if (targetCalories < 1200) targetCalories = 1200;
 
-    const protein_g = Math.round(
-      weightKg *
-        (/muscle|gain/i.test(plan) ? 2.2 : /fat|loss/i.test(plan) ? 2.0 : 1.6)
-    );
+    const protein_g = Math.round(weightKg * (/muscle|gain/i.test(plan) ? 2.2 : /fat|loss/i.test(plan) ? 2.0 : 1.6));
     const caloriesFromProtein = protein_g * 4;
     const fatsCalories = Math.round(targetCalories * 0.15);
     const fats_g = Math.round(fatsCalories / 9);
-    const carbsCalories = Math.max(
-      0,
-      targetCalories - (caloriesFromProtein + fatsCalories)
-    );
+    const carbsCalories = Math.max(0, targetCalories - (caloriesFromProtein + fatsCalories));
     const carbs_g = Math.round(carbsCalories / 4);
-
     const macrosTarget = { protein_g, carbs_g, fats_g };
 
-    // ✅ Add generated meals field (empty for now)
-    const generated = { meals: [] };
+    // --- Sample meal generation ---
+    const meals = [
+      { slot:"breakfast", kcal: Math.round(targetCalories*0.25), items:[
+        { name:"Oats", portion:"50g", calories:120, protein:4, carbs:20, fat:2 },
+        { name:"Milk", portion:"200ml", calories:100, protein:7, carbs:10, fat:3 }
+      ]},
+      { slot:"lunch", kcal: Math.round(targetCalories*0.35), items:[
+        { name:"Rice", portion:"100g", calories:130, protein:3, carbs:28, fat:0.3 },
+        { name:"Chicken", portion:"100g", calories:165, protein:31, carbs:0, fat:3.6 }
+      ]},
+      { slot:"dinner", kcal: Math.round(targetCalories*0.3), items:[
+        { name:"Salad", portion:"200g", calories:80, protein:2, carbs:10, fat:3 },
+        { name:"Paneer", portion:"100g", calories:250, protein:18, carbs:6, fat:20 }
+      ]}
+    ];
 
-    res.json({ success: true, plan: { goal: plan, targetCalories, macrosTarget, generated } });
+    res.json({ success:true, plan:{ goal:plan, targetCalories, macrosTarget, generated:{ meals } } });
+
   } catch (err) {
     console.error("Generate Diet Error:", err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success:false, error:err.message });
   }
 });
 
@@ -273,38 +260,33 @@ app.post("/save-diet", async (req, res) => {
         macros: plan.macros || plan.macrosTarget || {},
         meals: plan.meals || plan.generated?.meals || [],
       },
-      { upsert: true, new: true }
+      { upsert:true, new:true }
     );
 
-    res.json({ success: true, doc });
+    res.json({ success:true, doc });
   } catch (err) {
     console.error("Save Diet Error:", err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success:false, error:err.message });
   }
 });
 
-app.post("/get-diet", async (req, res) => {
+app.post("/get-diet", async (req,res) => {
   try {
     const { email } = req.body;
-    if (!email)
-      return res.status(400).json({ success: false, message: "email required" });
-
+    if(!email) return res.status(400).json({ success:false, message:"email required" });
     const doc = await Diet.findOne({ email }).lean();
-    res.json({ success: true, plan: doc || null });
-  } catch (err) {
+    res.json({ success:true, plan: doc || null });
+  } catch(err) {
     console.error("Get Diet Error:", err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success:false, error:err.message });
   }
 });
 
 /* ---------------- MongoDB + Start ---------------- */
-const MONGO =
-  "mongodb+srv://sambrale9003_db_user:JGu5OVBFdZ1h8f3u@diet-subs.yjxt7v8.mongodb.net/dietApp";
+const MONGO = "mongodb+srv://sambrale9003_db_user:JGu5OVBFdZ1h8f3u@diet-subs.yjxt7v8.mongodb.net/dietApp";
 
-mongoose
-  .connect(MONGO, {})
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("MongoDB Error:", err));
+mongoose.connect(MONGO, {}).then(()=>console.log("✅ MongoDB Connected"))
+  .catch(err=>console.error("MongoDB Error:",err));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, ()=>console.log(`🚀 Server running on http://localhost:${PORT}`));
