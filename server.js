@@ -1,17 +1,16 @@
-// ===== Diet SaaS Backend =====
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const Razorpay = require("razorpay");
 const bcrypt = require("bcryptjs");
 
-// ===== Models =====
+// Models
 const User = require("./models/User");
 const Subscription = require("./models/subscription");
 const Food = require("./models/Food");
 const Diet = require("./models/Diet");
 
-// ===== App Init =====
+// Express app
 const app = express();
 app.use(express.json());
 app.use(
@@ -26,9 +25,9 @@ app.use(
   })
 );
 
-// ===== Razorpay Config =====
+// Razorpay config
 const razorpay = new Razorpay({
-  key_id: "rzp_test_RDOq87kgys57h2", // 🔹 Replace with LIVE key in production
+  key_id: "rzp_test_RDOq87kgys57h2",
   key_secret: "m36sZB7IqA2HeD2B51YybL7P",
 });
 
@@ -37,16 +36,15 @@ app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password)
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields required" });
+      return res.status(400).json({ success: false, message: "All fields required" });
 
     const existing = await User.findOne({ email });
     if (existing)
       return res.json({ success: false, message: "Email already exists" });
 
     const hashed = await bcrypt.hash(password, 10);
-    await new User({ name, email, password: hashed }).save();
+    const user = new User({ name, email, password: hashed });
+    await user.save();
 
     res.json({ success: true, message: "User registered successfully" });
   } catch (err) {
@@ -59,9 +57,7 @@ app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email & password required" });
+      return res.status(400).json({ success: false, message: "Email & password required" });
 
     const user = await User.findOne({ email });
     if (!user) return res.json({ success: false, message: "User not found" });
@@ -69,7 +65,7 @@ app.post("/login", async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.json({ success: false, message: "Invalid password" });
 
-    // ✅ Latest subscription check
+    // ✅ Check latest subscription
     const sub = await Subscription.findOne({ email }).sort({ createdAt: -1 });
     let active = false;
     let expiry = null;
@@ -98,15 +94,14 @@ app.post("/create-order", async (req, res) => {
   try {
     const { amount } = req.body;
     if (!amount)
-      return res
-        .status(400)
-        .json({ success: false, message: "Amount required" });
+      return res.status(400).json({ success: false, message: "Amount required" });
 
     const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100), // paise
+      amount: Math.round(amount * 100),
       currency: "INR",
       receipt: "receipt_" + Date.now(),
     });
+
     res.json(order);
   } catch (err) {
     console.error("Create Order Error:", err);
@@ -118,13 +113,12 @@ app.post("/verify-payment", async (req, res) => {
   try {
     const { name, email, plan, paymentId } = req.body;
     if (!name || !email || !plan || !paymentId)
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing fields" });
+      return res.status(400).json({ success: false, message: "Missing fields" });
 
+    // ✅ 1-Month Subscription
     const startDate = new Date();
     const expiryDate = new Date();
-    expiryDate.setDate(startDate.getDate() + 30); // Default 30 days
+    expiryDate.setMonth(startDate.getMonth() + 1);
 
     const newSub = new Subscription({
       name,
@@ -138,7 +132,7 @@ app.post("/verify-payment", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Subscription Activated!",
+      message: "✅ 1-Month Subscription Activated!",
       subscription: newSub,
     });
   } catch (err) {
@@ -147,10 +141,9 @@ app.post("/verify-payment", async (req, res) => {
   }
 });
 
-// ✅ GET & POST both for check-subscription
-app.all("/check-subscription", async (req, res) => {
+app.post("/check-subscription", async (req, res) => {
   try {
-    const email = req.body.email || req.query.email;
+    const { email } = req.body;
     if (!email)
       return res.status(400).json({ active: false, message: "Email required" });
 
@@ -158,7 +151,7 @@ app.all("/check-subscription", async (req, res) => {
     if (!sub) return res.json({ active: false, message: "No subscription" });
 
     if (new Date() <= sub.expiryDate)
-      return res.json({ active: true, expiry: sub.expiryDate, plan: sub.plan });
+      return res.json({ active: true, expiry: sub.expiryDate });
 
     res.json({ active: false, message: "Subscription expired" });
   } catch (err) {
@@ -170,23 +163,11 @@ app.all("/check-subscription", async (req, res) => {
 /* ---------------- FOOD ---------------- */
 app.post("/admin/food", async (req, res) => {
   try {
-    const { name, category, portion, calories, protein, carbs, fat, type } =
-      req.body;
+    const { name, category, portion, calories, protein, carbs, fat, type } = req.body;
     if (!name || !category || calories == null)
-      return res
-        .status(400)
-        .json({ success: false, message: "name/category/calories required" });
+      return res.status(400).json({ success: false, message: "name/category/calories required" });
 
-    const food = new Food({
-      name,
-      category,
-      portion,
-      calories,
-      protein,
-      carbs,
-      fat,
-      type,
-    });
+    const food = new Food({ name, category, portion, calories, protein, carbs, fat, type });
     await food.save();
     res.json({ success: true, food });
   } catch (err) {
@@ -198,8 +179,6 @@ app.post("/admin/food", async (req, res) => {
 app.get("/foods", async (req, res) => {
   try {
     const foods = await Food.find().lean();
-
-    // ✅ Remove duplicate "rice"
     const seen = new Set();
     const unique = [];
     for (let f of foods) {
@@ -209,7 +188,6 @@ app.get("/foods", async (req, res) => {
       }
       unique.push(f);
     }
-
     res.json({ success: true, foods: unique });
   } catch (err) {
     console.error("Get Foods Error:", err);
@@ -229,15 +207,12 @@ app.post("/generate-diet", async (req, res) => {
       heightCm,
       activityLevel = "moderate",
       dietType = "nonveg",
+      save = false,
     } = req.body;
 
-    if (!plan || !age || !weightKg || !heightCm) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing required fields" });
-    }
+    if (!plan || !age || !weightKg || !heightCm)
+      return res.status(400).json({ success: false, message: "Missing required fields" });
 
-    // --- BMR + TDEE ---
     const bmr =
       gender === "female"
         ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161
@@ -250,9 +225,9 @@ app.post("/generate-diet", async (req, res) => {
       active: 1.725,
       very_active: 1.9,
     };
+
     const tdee = Math.round(bmr * (activityMap[activityLevel] || 1.55));
 
-    // --- Calories & Macros ---
     let targetCalories = tdee;
     if (/fat|loss/i.test(plan)) targetCalories -= 500;
     else if (/muscle|gain/i.test(plan)) targetCalories += 350;
@@ -260,11 +235,7 @@ app.post("/generate-diet", async (req, res) => {
 
     const protein_g = Math.round(
       weightKg *
-        (/muscle|gain/i.test(plan)
-          ? 2.2
-          : /fat|loss/i.test(plan)
-          ? 2.0
-          : 1.6)
+        (/muscle|gain/i.test(plan) ? 2.2 : /fat|loss/i.test(plan) ? 2.0 : 1.6)
     );
     const caloriesFromProtein = protein_g * 4;
     const fatsCalories = Math.round(targetCalories * 0.15);
@@ -277,10 +248,7 @@ app.post("/generate-diet", async (req, res) => {
 
     const macrosTarget = { protein_g, carbs_g, fats_g };
 
-    res.json({
-      success: true,
-      plan: { goal: plan, targetCalories, macrosTarget },
-    });
+    res.json({ success: true, plan: { goal: plan, targetCalories, macrosTarget } });
   } catch (err) {
     console.error("Generate Diet Error:", err);
     res.status(500).json({ success: false, error: err.message });
@@ -292,9 +260,7 @@ app.post("/save-diet", async (req, res) => {
   try {
     const { email, plan } = req.body;
     if (!email || !plan)
-      return res
-        .status(400)
-        .json({ success: false, message: "email & plan required" });
+      return res.status(400).json({ success: false, message: "email & plan required" });
 
     const doc = await Diet.findOneAndUpdate(
       { email },
@@ -303,7 +269,7 @@ app.post("/save-diet", async (req, res) => {
         goal: plan.goal,
         calories: plan.calories || plan.targetCalories || 0,
         macros: plan.macros || plan.macrosTarget || {},
-        meals: plan.meals || [],
+        meals: plan.meals || plan.generated?.meals || [],
       },
       { upsert: true, new: true }
     );
@@ -319,9 +285,7 @@ app.post("/get-diet", async (req, res) => {
   try {
     const { email } = req.body;
     if (!email)
-      return res
-        .status(400)
-        .json({ success: false, message: "email required" });
+      return res.status(400).json({ success: false, message: "email required" });
 
     const doc = await Diet.findOne({ email }).lean();
     res.json({ success: true, plan: doc || null });
@@ -331,16 +295,14 @@ app.post("/get-diet", async (req, res) => {
   }
 });
 
-/* ---------------- DB + START ---------------- */
+/* ---------------- MongoDB + Start ---------------- */
 const MONGO =
   "mongodb+srv://sambrale9003_db_user:JGu5OVBFdZ1h8f3u@diet-subs.yjxt7v8.mongodb.net/dietApp";
 
 mongoose
-  .connect(MONGO, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(MONGO, {})
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("MongoDB Error:", err));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-);
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
