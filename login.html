@@ -76,10 +76,25 @@
           localStorage.setItem("userEmail", email);
 
           if (incomingPlan && incomingPrice) {
-            sessionStorage.setItem("selectedPlan", incomingPlan);
-            sessionStorage.setItem("selectedPrice", incomingPrice);
-            window.location.href = `payment.html?plan=${encodeURIComponent(incomingPlan)}&price=${encodeURIComponent(incomingPrice)}&email=${encodeURIComponent(email)}`;
+            // ✅ पहले subscription check करेंगे
+            const subRes = await fetch(`${BASE}/check-subscription`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, plan: incomingPlan })
+            });
+            const subData = await subRes.json();
+
+            if (subData.active) {
+              alert(`✅ Your ${incomingPlan} plan is already active till ${new Date(subData.expiry).toLocaleDateString()}`);
+              window.location.href = "index.html"; // already active → go to dashboard
+            } else {
+              // not active → go to payment
+              sessionStorage.setItem("selectedPlan", incomingPlan);
+              sessionStorage.setItem("selectedPrice", incomingPrice);
+              window.location.href = `payment.html?plan=${encodeURIComponent(incomingPlan)}&price=${encodeURIComponent(incomingPrice)}&email=${encodeURIComponent(email)}`;
+            }
           } else {
+            // no plan → just login success
             window.location.href = "index.html";
           }
         } else {
