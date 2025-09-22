@@ -32,6 +32,7 @@
       line-height: 1.6;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       color: #000;
+      white-space: pre-line;
     }
     button {
       display: block;
@@ -49,7 +50,7 @@
       background: #f60505;
       color: white;
     }
-    #payBtn:hover { background: #0056b3; }
+    #payBtn:hover { background: #c00404; }
     #goBack {
       background: #6c757d;
       color: white;
@@ -64,9 +65,9 @@
   <button id="goBack" style="display:none">Go Back to Plans</button>
 
   <script>
-    const BASE = "https://diet-saas.onrender.com"; // backend
+    const BASE = "https://diet-saas.onrender.com"; // 🔹 backend base URL
 
-    // URL or session storage
+    // 🔹 Extract plan details
     const urlParams = new URLSearchParams(window.location.search);
     let plan = urlParams.get("plan") || sessionStorage.getItem("selectedPlan");
     let price = urlParams.get("price") || sessionStorage.getItem("selectedPrice");
@@ -74,13 +75,14 @@
 
     const payBtn = document.getElementById("payBtn");
     const goBack = document.getElementById("goBack");
+    const planDetails = document.getElementById("planDetails");
 
-    // Show plan info
-    document.getElementById("planDetails").innerText = plan 
-      ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || 'not set'}`
-      : "Plan details missing!";
+    // 🔹 Show plan info
+    planDetails.innerText = plan && price
+      ? `Plan: ${plan}\nPrice: ₹${price}\nEmail: ${email || "Not provided"}`
+      : "❌ Plan details missing! Please go back and select again.";
 
-    // === Check user login + active plan ===
+    // 🔹 Check user login + active subscription
     (async function checkUserAndPlan() {
       if (!email) {
         alert("Please login or register before buying a plan.");
@@ -91,7 +93,7 @@
         const res = await fetch(`${BASE}/check-subscription?email=${email}`);
         const data = await res.json();
         if (data.active) {
-          alert(`You already have an active plan (${data.plan}).`);
+          alert(`✅ You already have an active plan (${data.plan}). Redirecting to Dashboard...`);
           window.location.href = "dashboard.html";
         }
       } catch (err) {
@@ -99,13 +101,14 @@
       }
     })();
 
+    // 🔹 If plan info missing, disable pay
     if (!plan || !price || !email) {
       payBtn.disabled = true;
       goBack.style.display = "inline-block";
       goBack.onclick = () => window.location.href = "index.html";
     }
 
-    // === Razorpay checkout ===
+    // 🔹 Razorpay checkout
     payBtn.addEventListener("click", async () => {
       try {
         const amountNum = Number(price);
@@ -114,6 +117,7 @@
           return;
         }
 
+        // Create order
         const createRes = await fetch(`${BASE}/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -126,43 +130,50 @@
           return;
         }
 
+        // Razorpay options
         const options = {
-          key: "rzp_test_RDOq87kgys57h2", 
+          key: "rzp_test_RDOq87kgys57h2", // 🔹 replace with LIVE key in production
           amount: order.amount,
           currency: order.currency,
           name: "Diet Subscription",
-          description: plan,
+          description: `Subscription Plan: ${plan}`,
           order_id: order.id,
           prefill: { email: email, name: email.split("@")[0] },
           handler: async function(response) {
-            const verifyRes = await fetch(`${BASE}/verify-payment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: email.split("@")[0],
-                email,
-                plan,
-                paymentId: response.razorpay_payment_id
-              })
-            });
-            const result = await verifyRes.json();
-            if (result.success) {
-              alert("Payment successful — subscription activated!");
-              sessionStorage.setItem("subActive", "true");
-              window.location.href = "dashboard.html";
-            } else {
-              alert("Payment verification failed.");
+            try {
+              const verifyRes = await fetch(`${BASE}/verify-payment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: email.split("@")[0],
+                  email,
+                  plan,
+                  paymentId: response.razorpay_payment_id
+                })
+              });
+              const result = await verifyRes.json();
+              if (result.success) {
+                alert("🎉 Payment successful — subscription activated!");
+                sessionStorage.setItem("subActive", "true");
+                window.location.href = "dashboard.html";
+              } else {
+                alert("❌ Payment verification failed. Please contact support.");
+              }
+            } catch (err) {
+              console.error("Verification Error:", err);
+              alert("Server error while verifying payment.");
             }
           },
           theme: { color: "#3399cc" }
         };
 
+        // Open Razorpay modal
         const rzp = new Razorpay(options);
         rzp.open();
 
       } catch (err) {
         console.error("Payment Error:", err);
-        alert("Payment error. Check console.");
+        alert("Payment error. Please check console for details.");
       }
     });
   </script>
