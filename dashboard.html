@@ -28,10 +28,8 @@
       <div><button id="logoutBtn" class="btn">Logout</button></div>
     </div>
 
-    <!-- Subscription status -->
     <div id="subscriptionStatus" class="card">Checking subscription...</div>
 
-    <!-- Assessment form -->
     <div id="assessmentCard" class="card" style="display:none;">
       <h2>Body Assessment</h2>
       <div class="small">Fill details to generate a personalized diet</div>
@@ -55,11 +53,9 @@
       <select id="goal"><option value="fatloss">Fat Loss</option><option value="muscle">Muscle Gain</option><option value="general">General Fitness</option></select>
       <label>Diet Preference</label>
       <select id="dietType"><option value="veg">Vegetarian</option><option value="nonveg">Non-Vegetarian</option></select>
-
       <button id="genBtn" class="btn">Generate Plan (Preview)</button>
     </div>
 
-    <!-- Diet plan -->
     <div id="dietCard" class="card" style="display:none;">
       <div id="dietHeader"></div>
       <div id="mealsContainer"></div>
@@ -72,191 +68,173 @@
   </div>
 
 <script>
-  const BASE = "https://diet-saas.onrender.com"; // change to http://localhost:5000 when testing locally
-  const email = localStorage.getItem("userEmail");
-  const selectedPlan = sessionStorage.getItem("selectedPlan");
+const BASE = "https://diet-saas.onrender.com";
+const email = localStorage.getItem("userEmail");
+const selectedPlan = sessionStorage.getItem("selectedPlan");
 
-  // logout
-  document.getElementById("logoutBtn").addEventListener("click", ()=> {
-    localStorage.clear(); sessionStorage.clear(); window.location.href = "login.html";
-  });
+document.getElementById("logoutBtn").addEventListener("click", ()=> {
+  localStorage.clear(); sessionStorage.clear(); window.location.href = "login.html";
+});
 
-  // ------------------- Subscription check -------------------
-  async function checkSubscription() {
-    if(!email || !selectedPlan) {
-      document.getElementById("subscriptionStatus").innerText = "❌ No plan selected. Please select a plan first.";
-      return;
-    }
-    try {
-      const res = await fetch(`${BASE}/check-subscription`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ email, plan: selectedPlan })
-      });
-      const data = await res.json();
-
-      if(data.active) {
-        // ✅ Active subscription
-        document.getElementById("subscriptionStatus").innerHTML =
-          `✅ Subscription Active — Valid until ${new Date(data.expiry).toDateString()}`;
-        // load diet / assessment
-        loadSavedDiet();
-      } else {
-        // ❌ Expired or not found
-        document.getElementById("subscriptionStatus").innerHTML =
-          "❌ Subscription not found or expired.<br><br><a href='plans.html'><button class='btn'>Subscribe Now</button></a>";
-        // Hide diet/assessment cards
-        document.getElementById("assessmentCard").style.display = "none";
-        document.getElementById("dietCard").style.display = "none";
-      }
-    } catch (err) {
-      console.error(err);
-      document.getElementById("subscriptionStatus").innerText = "⚠️ Error connecting to server.";
-    }
+async function checkSubscription() {
+  if(!email || !selectedPlan) {
+    document.getElementById("subscriptionStatus").innerText = "❌ No plan selected. Please select a plan first.";
+    return;
   }
-
-  // ------------------- Load saved diet -------------------
-  async function loadSavedDiet() {
-    try {
-      const res = await fetch(`${BASE}/get-diet`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if(data.success && data.plan) {
-        showDietSaved(data.plan);
-      } else {
-        document.getElementById("assessmentCard").style.display = "block";
-      }
-    } catch (err) {
-      console.error(err);
-      document.getElementById("assessmentCard").style.display = "block";
-    }
-  }
-
-  // ------------------- Generate new plan -------------------
-  document.getElementById("genBtn").addEventListener("click", async () => {
-    const height = Number(document.getElementById("height").value);
-    const weight = Number(document.getElementById("weight").value);
-    const age = Number(document.getElementById("age").value);
-    const gender = document.getElementById("gender").value;
-    const activity = document.getElementById("activity").value;
-    const goal = document.getElementById("goal").value;
-    const dietType = document.getElementById("dietType").value;
-
-    if(!height || !weight || !age) return alert("Please fill height/weight/age");
-
-    try {
-      const res = await fetch(`${BASE}/generate-diet`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-          email,
-          plan: goal,
-          age,
-          gender,
-          weightKg: weight,
-          heightCm: height,
-          activityLevel: activity,
-          dietType,
-          save: false
-        })
-      });
-      const data = await res.json();
-      if(!data.success) return alert("Error: "+(data.error||data.message));
-      showGeneratedPlan(data.plan);
-      document.getElementById("dietCard").style.display = "block";
-    } catch (err) {
-      console.error(err);
-      alert("Server error");
-    }
-  });
-
-  // ------------------- Helpers -------------------
-  function calcTotals(meals) {
-    let total = { kcal:0, protein:0, carbs:0, fats:0 };
-    meals.forEach(m => {
-      (m.items||[]).forEach(i => {
-        total.kcal += i.calories || 0;
-        total.protein += i.protein || 0;
-        total.carbs += i.carbs || 0;
-        total.fats += i.fat || 0;
-      });
+  try {
+    const res = await fetch(`${BASE}/check-subscription`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ email, plan: selectedPlan })
     });
-    return total;
-  }
+    const data = await res.json();
 
-  function renderMeals(meals) {
-    return meals.map(m => `
-      <div class="meal">
-        <strong>${m.slot.toUpperCase()} — ${m.kcal || 0} kcal</strong>
-        <ul>${(m.items||[]).map(i=>
-          `<li>${i.name} (${i.portion}) — ${i.calories} kcal | P:${i.protein}g C:${i.carbs}g F:${i.fat}g</li>`
-        ).join("")}</ul>
-      </div>
-    `).join("");
-  }
-
-  function showGeneratedPlan(plan) {
-    document.getElementById("dietHeader").innerHTML = `
-      <h2>Preview — ${plan.goal} • target ${plan.targetCalories} kcal</h2>
-      <div class="small">Target: Protein ${plan.macrosTarget.protein_g}g • Carbs ${plan.macrosTarget.carbs_g}g • Fats ${plan.macrosTarget.fats_g}g</div>`;
-
-    document.getElementById("mealsContainer").innerHTML = renderMeals(plan.generated.meals);
-
-    const totals = calcTotals(plan.generated.meals);
-    document.getElementById("totalsContainer").innerHTML =
-      `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
-
-    document.getElementById("saveBtn").onclick = async () => {
-      try {
-        const payload = { email, plan: {
-          goal: plan.goal,
-          calories: totals.kcal,
-          macros: totals,
-          meals: plan.generated.meals
-        }};
-        const r = await fetch(`${BASE}/save-diet`, {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify(payload)
-        });
-        const d = await r.json();
-        if(d.success) alert("Plan saved!");
-        else alert("Save failed");
-      } catch (e) { console.error(e); alert("Error saving"); }
-    };
-
-    document.getElementById("editBtn").onclick = () => {
+    if(data.active) {
+      document.getElementById("subscriptionStatus").innerHTML =
+        `✅ Subscription Active — Valid until ${new Date(data.expiry).toDateString()}`;
+      loadSavedDiet();
+    } else {
+      document.getElementById("subscriptionStatus").innerHTML =
+        "❌ Subscription not found or expired.<br><br><a href='plans.html'><button class='btn'>Subscribe Now</button></a>";
+      document.getElementById("assessmentCard").style.display = "none";
       document.getElementById("dietCard").style.display = "none";
-      document.getElementById("assessmentCard").style.display = "block";
-    };
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById("subscriptionStatus").innerText = "⚠️ Error connecting to server.";
   }
+}
 
-  function showDietSaved(planDoc) {
-    document.getElementById("assessmentCard").style.display = "none";
+async function loadSavedDiet() {
+  try {
+    const res = await fetch(`${BASE}/get-diet`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if(data.success && data.plan) {
+      showDietSaved(data.plan);
+    } else {
+      document.getElementById("assessmentCard").style.display = "block";
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById("assessmentCard").style.display = "block";
+  }
+}
+
+document.getElementById("genBtn").addEventListener("click", async () => {
+  const height = Number(document.getElementById("height").value);
+  const weight = Number(document.getElementById("weight").value);
+  const age = Number(document.getElementById("age").value);
+  const gender = document.getElementById("gender").value;
+  const activity = document.getElementById("activity").value;
+  const goal = document.getElementById("goal").value;
+  const dietType = document.getElementById("dietType").value;
+
+  if(!height || !weight || !age) return alert("Please fill height/weight/age");
+
+  try {
+    const res = await fetch(`${BASE}/generate-diet`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        email, plan: goal, age, gender, weightKg: weight, heightCm: height,
+        activityLevel: activity, dietType, save: false
+      })
+    });
+    const data = await res.json();
+    if(!data.success) return alert("Error: "+(data.error||data.message));
+    showGeneratedPlan(data.plan);
     document.getElementById("dietCard").style.display = "block";
-    document.getElementById("dietHeader").innerHTML =
-      `<h2>Saved plan — ${planDoc.goal} • ${planDoc.calories} kcal</h2>`;
-
-    document.getElementById("mealsContainer").innerHTML = renderMeals(planDoc.meals||[]);
-
-    const totals = calcTotals(planDoc.meals||[]);
-    document.getElementById("totalsContainer").innerHTML =
-      `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
-
-    document.getElementById("saveBtn").onclick = () => {
-      alert("Saved already. Use Edit to change the plan.");
-    };
-    document.getElementById("editBtn").onclick = () => {
-      document.getElementById("dietCard").style.display = "none";
-      document.getElementById("assessmentCard").style.display = "block";
-    };
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
   }
+});
 
-  // init
-  checkSubscription();
+function calcTotals(meals = []) {
+  let total = { kcal:0, protein:0, carbs:0, fats:0 };
+  meals.forEach(m => {
+    (m.items||[]).forEach(i => {
+      total.kcal += i.calories || 0;
+      total.protein += i.protein || 0;
+      total.carbs += i.carbs || 0;
+      total.fats += i.fat || 0;
+    });
+  });
+  return total;
+}
+
+function renderMeals(meals = []) {
+  if (!meals.length) return "<p>No meals generated yet.</p>";
+  return meals.map(m => `
+    <div class="meal">
+      <strong>${m.slot?.toUpperCase() || "Meal"} — ${m.kcal || 0} kcal</strong>
+      <ul>${(m.items || []).map(i =>
+        `<li>${i.name || "-"} (${i.portion || "-"}) — ${i.calories||0} kcal | P:${i.protein||0}g C:${i.carbs||0}g F:${i.fat||0}g</li>`
+      ).join("")}</ul>
+    </div>
+  `).join("");
+}
+
+function showGeneratedPlan(plan) {
+  if (!plan) return alert("No plan data received");
+  const meals = plan.generated?.meals || [];
+
+  document.getElementById("dietHeader").innerHTML = `
+    <h2>Preview — ${plan.goal || "-"} • target ${plan.targetCalories || 0} kcal</h2>
+    <div class="small">
+      Target: Protein ${plan.macrosTarget?.protein_g || 0}g • Carbs ${plan.macrosTarget?.carbs_g || 0}g • Fats ${plan.macrosTarget?.fats_g || 0}g
+    </div>`;
+  document.getElementById("mealsContainer").innerHTML = renderMeals(meals);
+
+  const totals = calcTotals(meals);
+  document.getElementById("totalsContainer").innerHTML =
+    `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
+
+  document.getElementById("saveBtn").onclick = async () => {
+    try {
+      const payload = { email, plan: { goal: plan.goal, calories: totals.kcal, macros: totals, meals } };
+      const r = await fetch(`${BASE}/save-diet`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      const d = await r.json();
+      if(d.success) alert("Plan saved!");
+      else alert("Save failed");
+    } catch (e) { console.error(e); alert("Error saving"); }
+  };
+
+  document.getElementById("editBtn").onclick = () => {
+    document.getElementById("dietCard").style.display = "none";
+    document.getElementById("assessmentCard").style.display = "block";
+  };
+}
+
+function showDietSaved(planDoc) {
+  document.getElementById("assessmentCard").style.display = "none";
+  document.getElementById("dietCard").style.display = "block";
+  const meals = planDoc.meals || [];
+
+  document.getElementById("dietHeader").innerHTML =
+    `<h2>Saved plan — ${planDoc.goal || "-"} • ${planDoc.calories || 0} kcal</h2>`;
+  document.getElementById("mealsContainer").innerHTML = renderMeals(meals);
+
+  const totals = calcTotals(meals);
+  document.getElementById("totalsContainer").innerHTML =
+    `Total: ${totals.kcal} kcal | Protein ${totals.protein.toFixed(1)}g • Carbs ${totals.carbs.toFixed(1)}g • Fats ${totals.fats.toFixed(1)}g`;
+
+  document.getElementById("saveBtn").onclick = () => alert("Saved already. Use Edit to change the plan.");
+  document.getElementById("editBtn").onclick = () => {
+    document.getElementById("dietCard").style.display = "none";
+    document.getElementById("assessmentCard").style.display = "block";
+  };
+}
+
+checkSubscription();
 </script>
 </body>
 </html>

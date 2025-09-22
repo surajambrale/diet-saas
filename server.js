@@ -65,7 +65,6 @@ app.post("/login", async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.json({ success: false, message: "Invalid password" });
 
-    // ✅ Check latest subscription
     const sub = await Subscription.findOne({ email }).sort({ createdAt: -1 });
     let active = false;
     let expiry = null;
@@ -248,7 +247,10 @@ app.post("/generate-diet", async (req, res) => {
 
     const macrosTarget = { protein_g, carbs_g, fats_g };
 
-    res.json({ success: true, plan: { goal: plan, targetCalories, macrosTarget } });
+    // ✅ Add generated meals field (empty for now)
+    const generated = { meals: [] };
+
+    res.json({ success: true, plan: { goal: plan, targetCalories, macrosTarget, generated } });
   } catch (err) {
     console.error("Generate Diet Error:", err);
     res.status(500).json({ success: false, error: err.message });
