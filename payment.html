@@ -65,7 +65,7 @@
   <button id="goBack" style="display:none">Go Back to Plans</button>
 
   <script>
-    const BASE = "https://diet-saas.onrender.com"; // 🔹 backend base URL
+    const BASE = "https://diet-saas.onrender.com";
 
     // 🔹 Extract plan details
     const urlParams = new URLSearchParams(window.location.search);
@@ -86,14 +86,18 @@
     (async function checkUserAndPlan() {
       if (!email) {
         alert("Please login or register before buying a plan.");
-        window.location.href = "register.html"; 
+        window.location.href = "login.html";
         return;
       }
       try {
-        const res = await fetch(`${BASE}/check-subscription?email=${email}`);
+        const res = await fetch(`${BASE}/check-subscription`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
         const data = await res.json();
         if (data.active) {
-          alert(`✅ You already have an active plan (${data.plan}). Redirecting to Dashboard...`);
+          alert(`✅ You already have an active plan. Redirecting to Dashboard...`);
           window.location.href = "dashboard.html";
         }
       } catch (err) {
@@ -105,7 +109,7 @@
     if (!plan || !price || !email) {
       payBtn.disabled = true;
       goBack.style.display = "inline-block";
-      goBack.onclick = () => window.location.href = "index.html";
+      goBack.onclick = () => window.location.href = "plans.html";
     }
 
     // 🔹 Razorpay checkout
@@ -121,7 +125,7 @@
         const createRes = await fetch(`${BASE}/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: amountNum, plan: plan, email: email })
+          body: JSON.stringify({ amount: amountNum })
         });
         const order = await createRes.json();
         if (!order || !order.id) {
@@ -154,7 +158,6 @@
               const result = await verifyRes.json();
               if (result.success) {
                 alert("🎉 Payment successful — subscription activated!");
-                sessionStorage.setItem("subActive", "true");
                 window.location.href = "dashboard.html";
               } else {
                 alert("❌ Payment verification failed. Please contact support.");

@@ -75,27 +75,33 @@
         if (data.success) {
           localStorage.setItem("userEmail", email);
 
+          // ✅ Case 1: Agar user ne plan select karke login kiya
           if (incomingPlan && incomingPrice) {
-            // ✅ पहले subscription check करेंगे
             const subRes = await fetch(`${BASE}/check-subscription`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email, plan: incomingPlan })
+              body: JSON.stringify({ email })
             });
             const subData = await subRes.json();
 
             if (subData.active) {
               alert(`✅ Your ${incomingPlan} plan is already active till ${new Date(subData.expiry).toLocaleDateString()}`);
-              window.location.href = "index.html"; // already active → go to dashboard
+              window.location.href = "dashboard.html"; // active → dashboard
             } else {
-              // not active → go to payment
+              // expired/no plan → go to payment
               sessionStorage.setItem("selectedPlan", incomingPlan);
               sessionStorage.setItem("selectedPrice", incomingPrice);
               window.location.href = `payment.html?plan=${encodeURIComponent(incomingPlan)}&price=${encodeURIComponent(incomingPrice)}&email=${encodeURIComponent(email)}`;
             }
-          } else {
-            // no plan → just login success
-            window.location.href = "index.html";
+          } 
+          // ✅ Case 2: Agar sirf login kiya bina plan choose kiye
+          else {
+            if (data.planActive) {
+              window.location.href = "dashboard.html";
+            } else {
+              alert("❌ No active subscription. Please choose a plan.");
+              window.location.href = "plans.html";
+            }
           }
         } else {
           alert(data.message || "Login failed");

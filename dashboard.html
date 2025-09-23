@@ -81,10 +81,11 @@ document.getElementById("logoutBtn").addEventListener("click", ()=>{
 });
 
 async function checkSubscription() {
-  if(!email || !selectedPlan){
-    document.getElementById("subscriptionStatus").innerText = "❌ No plan selected. Please select a plan first.";
-    return;
-  }
+  if(!email){
+  document.getElementById("subscriptionStatus").innerText = "⚠️ Please login first.";
+  setTimeout(()=> window.location.href = "login.html", 1500);
+  return;
+}
   try{
     const res = await fetch(`${BASE}/check-subscription`, {
       method:"POST",

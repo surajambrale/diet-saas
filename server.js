@@ -27,8 +27,8 @@ app.use(
 
 // Razorpay config
 const razorpay = new Razorpay({
-  key_id: "rzp_test_RDOq87kgys57h2",
-  key_secret: "m36sZB7IqA2HeD2B51YybL7P",
+  key_id: "rzp_test_RDOq87kgys57h2", // apna test key
+  key_secret: "m36sZB7IqA2HeD2B51YybL7P", // apna secret
 });
 
 /* ---------------- AUTH ---------------- */
@@ -65,12 +65,16 @@ app.post("/login", async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.json({ success: false, message: "Invalid password" });
 
+    // Subscription check
     const sub = await Subscription.findOne({ email }).sort({ createdAt: -1 });
     let active = false;
     let expiry = null;
+    let plan = null;
+
     if (sub && sub.expiryDate && new Date() <= sub.expiryDate) {
       active = true;
       expiry = sub.expiryDate;
+      plan = sub.plan;
     }
 
     res.json({
@@ -79,7 +83,7 @@ app.post("/login", async (req, res) => {
       email: user.email,
       name: user.name,
       planActive: active,
-      plan: sub?.plan || null,
+      plan,
       expiry,
     });
   } catch (err) {
@@ -116,7 +120,7 @@ app.post("/verify-payment", async (req, res) => {
 
     const startDate = new Date();
     const expiryDate = new Date();
-    expiryDate.setMonth(startDate.getMonth() + 1);
+    expiryDate.setMonth(startDate.getMonth() + 1); // ✅ 1 month subscription
 
     const newSub = new Subscription({
       name,
@@ -149,7 +153,7 @@ app.post("/check-subscription", async (req, res) => {
     if (!sub) return res.json({ active: false, message: "No subscription" });
 
     if (new Date() <= sub.expiryDate)
-      return res.json({ active: true, expiry: sub.expiryDate });
+      return res.json({ active: true, expiry: sub.expiryDate, plan: sub.plan });
 
     res.json({ active: false, message: "Subscription expired" });
   } catch (err) {
@@ -193,10 +197,10 @@ app.get("/foods", async (req, res) => {
   }
 });
 
-/* ---------------- DIET GENERATOR (with meals) ---------------- */
+/* ---------------- DIET GENERATOR ---------------- */
 app.post("/generate-diet", async (req, res) => {
   try {
-    const { email, plan, age, gender, weightKg, heightCm, activityLevel="moderate", dietType="nonveg", save=false } = req.body;
+    const { email, plan, age, gender, weightKg, heightCm, activityLevel="moderate", dietType="nonveg" } = req.body;
     if (!plan || !age || !weightKg || !heightCm)
       return res.status(400).json({ success: false, message: "Missing required fields" });
 
@@ -220,7 +224,7 @@ app.post("/generate-diet", async (req, res) => {
     const carbs_g = Math.round(carbsCalories / 4);
     const macrosTarget = { protein_g, carbs_g, fats_g };
 
-    // --- Sample meal generation ---
+    // ✅ Always return meals array
     const meals = [
       { slot:"breakfast", kcal: Math.round(targetCalories*0.25), items:[
         { name:"Oats", portion:"50g", calories:120, protein:4, carbs:20, fat:2 },
@@ -236,7 +240,15 @@ app.post("/generate-diet", async (req, res) => {
       ]}
     ];
 
-    res.json({ success:true, plan:{ goal:plan, targetCalories, macrosTarget, generated:{ meals } } });
+    res.json({
+      success:true,
+      plan:{
+        goal:plan,
+        targetCalories,
+        macrosTarget,
+        generated:{ meals }
+      }
+    });
 
   } catch (err) {
     console.error("Generate Diet Error:", err);
@@ -285,7 +297,8 @@ app.post("/get-diet", async (req,res) => {
 /* ---------------- MongoDB + Start ---------------- */
 const MONGO = "mongodb+srv://sambrale9003_db_user:JGu5OVBFdZ1h8f3u@diet-subs.yjxt7v8.mongodb.net/dietApp";
 
-mongoose.connect(MONGO, {}).then(()=>console.log("✅ MongoDB Connected"))
+mongoose.connect(MONGO, {})
+  .then(()=>console.log("✅ MongoDB Connected"))
   .catch(err=>console.error("MongoDB Error:",err));
 
 const PORT = process.env.PORT || 5000;
